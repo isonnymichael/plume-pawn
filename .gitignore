@@ -1,0 +1,57 @@
+# Root
+.env
+.env.*.local
+.DS_Store
+node_modules/
+dist/
+build/
+*.log
+*.tsbuildinfo
+
+# Frontend (Vue)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*.local
+frontend/.vitepress/cache/
+frontend/.output/
+
+# Backend (Node.js + Express)
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/logs/
+backend/*.log
+
+# Contracts (Hardhat/Foundry)
+contracts/node_modules/
+contracts/cache/
+contracts/artifacts/
+contracts/.env
+contracts/typechain/
+contracts/types/
+contracts/.openzeppelin/
+
+# Database
+database/dump.sql
+database/.env
+database/*.sqlite
+*.db
+*.sql
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+*.swp
+*.swo
+Icon?
+.idea/
+.vscode/
+*.iml
+*.bak
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
