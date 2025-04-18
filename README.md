@@ -36,12 +36,7 @@ This project utilizes the Plume infrastructure for asset tokenization and implem
 
 ```bash
 plume-pawn/
-├── contracts/               # Hardhat Ignition + Smart Contracts
-│   ├── contracts/           # Solidity files
-│   ├── ignition/            # Ignition modules & deployments
-│   ├── artifacts/           # Build output (ABI, bytecode)
-│   ├── cache/               # Internal cache
-│   └── hardhat.config.ts    # Config Hardhat
+├── contracts/             # Smart contract for pawn logic
 ├── frontend/              # Vue 3 frontend app (DApp)
 ├── backend/               # Node.js backend API
 └── README.md              # This file
