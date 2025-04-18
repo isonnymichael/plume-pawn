@@ -1,22 +1,40 @@
 <!-- source: https://vuedapp.xyz/overview -->
 <script lang="ts" setup>
-import { computed, ref, watchEffect } from 'vue'
+import { computed, ref, watchEffect, onMounted } from 'vue'
 import { BrowserWalletConnector, useVueDapp, shortenAddress } from '@vue-dapp/core'
 import { VueDappModal, useVueDappModal } from '@vue-dapp/modal'
 import '@vue-dapp/modal/dist/style.css'
 import useConnectStore from '../store/connect'
+import { useRouter } from 'vue-router'
 
-const { addConnectors, isConnected, wallet, disconnect } = useVueDapp()
+const { addConnectors, isConnected, wallet, disconnect, watchDisconnect, watchConnected, watchChainIdChanged } = useVueDapp()
 
 const connectStore = useConnectStore()
 const showSwitchButton = computed(() => isConnected.value && wallet.chainId !== connectStore.supportedChainId);
 const error = ref(null)
+const router = useRouter()
 
 addConnectors([new BrowserWalletConnector()])
 
 watchEffect(() => {
   const shouldShow = isConnected.value && wallet.chainId === connectStore.supportedChainId
   connectStore.setShowDashboard(shouldShow)
+})
+
+watchConnected(() => {
+    if(connectStore.showDashboard){
+        router.push('/dashboard')
+    }
+})
+
+watchDisconnect(() => {
+  router.push('/')
+})
+
+watchChainIdChanged(() => {
+    if(isConnected.value && wallet.chainId === connectStore.supportedChainId){
+        router.push('/dashboard')
+    }
 })
 
 async function switchChain() {

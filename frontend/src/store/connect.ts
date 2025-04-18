@@ -9,6 +9,7 @@ interface ConnectState {
   decimals: number,
   rpcUrls: [string],
   blockExplorerUrls: [string],
+  connectorInitialized: boolean,
 }
 
 const useConnectStore = defineStore('connect', {
@@ -21,6 +22,7 @@ const useConnectStore = defineStore('connect', {
     rpcUrls: ['https://testnet-rpc.plumenetwork.xyz'],
     blockExplorerUrls: ['https://testnet-explorer.plumenetwork.xyz'],
     showDashboard: false,
+    connectorInitialized: false,
   }),
   actions: {
     setShowDashboard(value: boolean) {
