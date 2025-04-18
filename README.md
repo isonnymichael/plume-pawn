@@ -39,5 +39,4 @@ plume-pawn/
 ├── contracts/             # Smart contract for pawn logic
 ├── frontend/              # Vue 3 frontend app (DApp)
 ├── backend/               # Node.js backend API
-├── scripts/               # Contract deployment / management scripts
 └── README.md              # This file
