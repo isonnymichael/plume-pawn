@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createThirdwebClient } from 'thirdweb';
-import { ConnectButton, useActiveAccount } from 'thirdweb/react';
+import { ConnectButton, useActiveAccount, useActiveWalletChain } from 'thirdweb/react';
 import { createWallet } from 'thirdweb/wallets';
 import useAuthStore from '../stores/authStore';
 import { plumeTestnet } from '../lib/chain';
-
 
 const clientId = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
 
@@ -20,18 +20,26 @@ const wallets = [
 ];
 
 const WalletConnect = () => {
+  const navigate = useNavigate();
   const { login, logout, setAddress } = useAuthStore();
   const account = useActiveAccount();
+  const chain = useActiveWalletChain();
 
   useEffect(() => {
     if (account) {
-      login(account.address);
-      setAddress(account.address);
+      if (chain?.id === plumeTestnet.id) {
+        login(account.address);
+        setAddress(account.address);
+      } else {
+        logout();
+        setAddress(null);
+        navigate('/');
+      }
     } else {
       logout();
       setAddress(null);
     }
-  }, [account, login, logout, setAddress]);
+  }, [account, chain, login, logout, setAddress, navigate]);
 
   return (
     <div>
