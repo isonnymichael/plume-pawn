@@ -24,7 +24,7 @@ This project utilizes the Plume infrastructure for asset tokenization and implem
 
 | Layer         | Technology                   |
 |---------------|------------------------------|
-| Frontend      | Vue 3 + Vite                 |
+| Frontend      | React + Vite                 |
 | Wallet / Web3 | Thirdweb SDK + Ethers.js     |
 | Smart Contract| Solidity                     |
 | Backend       | Node.js + Express            |
@@ -37,6 +37,6 @@ This project utilizes the Plume infrastructure for asset tokenization and implem
 ```bash
 plume-pawn/
 ├── contracts/             # Smart contract for pawn logic
-├── frontend/              # Vue 3 frontend app (DApp)
+├── frontend/              # React frontend app (DApp)
 ├── backend/               # Node.js backend API
 └── README.md              # This file
