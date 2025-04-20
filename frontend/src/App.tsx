@@ -3,9 +3,19 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from './components/ProtectedRoute';
+import { ConfigProvider } from 'antd';
 
 function App() {
+  
   return (
+  <ConfigProvider
+      theme={{
+        token: {
+          fontFamily: "'Lufga', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        },
+      }}
+    >
+      
     <MainLayout>
       <Routes>
         <Route path="/" element={
@@ -20,6 +30,8 @@ function App() {
         } />
       </Routes>
     </MainLayout>
+
+  </ConfigProvider>
   );
 }
 
