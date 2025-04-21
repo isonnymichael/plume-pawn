@@ -28,7 +28,6 @@ describe("PlumePawn", function () {
     const PlumePawn = await ethers.getContractFactory("PlumePawn");
     pawn = await PlumePawn.deploy(PLUME_PUSD_ADDRESS, mockRWA.address);
 
-    await pUSD.connect(user).approve(pawn.address, ONE_PUSD);
     await mockRWA.connect(user).approve(pawn.address, tokenId);
   });
 
