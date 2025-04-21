@@ -2,38 +2,58 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { parseUnits } from "ethers";
+import hre from "hardhat"
 
-const ONE_PUSD = parseUnits("1", 18);
 const SMALL_AMOUNT = parseUnits("0.1", 18);
-const PLUME_PUSD_ADDRESS = "0x1E0E030AbCb4f07de629DCCEa458a271e0E82624";
 
 describe("PlumePawn", function () {
   let pawn: any;
   let mockRWA: any;
-  let pUSD: any;
+  let mockPUSD: any;
   let owner: any;
   let user: any;
   let tokenId = 1;
 
   beforeEach(async function () {
-    [owner, user] = await ethers.getSigners();
+    [owner, user] = await hre.ethers.getSigners(); 
+  
+    // Deploy Mock pUSD
+    const MockPUSD = await hre.ethers.getContractFactory("MockERC20");
+    mockPUSD = await MockPUSD.connect(owner).deploy("Plume USD", "pUSD", 18);
+    await mockPUSD.waitForDeployment();
 
-    pUSD = await ethers.getContractAt("IERC20", PLUME_PUSD_ADDRESS);
+    await mockPUSD.mint(user.address, parseUnits("1000", 18));
 
-    const MockRWA = await ethers.getContractFactory("PlumeDummyRWA");
-    mockRWA = await MockRWA.deploy();
-    await mockRWA.mint(user.address, tokenId);
-    await mockRWA.setTokenValue(tokenId, parseUnits("1", 18));
+    // Deploy Mock RWA
+    const MockRWA = await hre.ethers.getContractFactory("PlumeDummyRWA");
+    mockRWA = await MockRWA.connect(owner).deploy();
+    await mockRWA.waitForDeployment();
 
-    const PlumePawn = await ethers.getContractFactory("PlumePawn");
-    pawn = await PlumePawn.deploy(PLUME_PUSD_ADDRESS, mockRWA.address);
+    await mockRWA.mint(user.address, 1);
 
-    await mockRWA.connect(user).approve(pawn.address, tokenId);
-  });
+    const PlumePawn = await hre.ethers.getContractFactory("PlumePawn");
+    pawn = await PlumePawn.connect(owner).deploy(
+      await mockPUSD.getAddress(),
+      await mockRWA.getAddress()
+    );
+    await pawn.waitForDeployment();
+
+    const pawnAddress = await pawn.getAddress();
+    const mockRWAAddress = await mockRWA.getAddress();
+    const mockPUSDAddress = await mockPUSD.getAddress();
+
+    // Approve RWA NFT
+    await mockRWA.connect(user).approve(pawnAddress, 1);
+
+    // Approve pUSD token
+    await mockPUSD.connect(user).approve(pawnAddress, parseUnits("1000", 18));
+  });  
 
   it("should return all interest durations", async function () {
     const durations = await pawn.getAllDurations();
-    expect(durations.map((d: any) => d.toNumber())).to.include.members([
+    const durationNums = durations.map((d: bigint) => Number(d));
+  
+    expect(durationNums).to.include.members([
       30 * 24 * 60 * 60,
       90 * 24 * 60 * 60,
       180 * 24 * 60 * 60,
@@ -41,21 +61,21 @@ describe("PlumePawn", function () {
   });
 
   it("should return total liquidity (TVL)", async function () {
-    await pUSD.connect(user).approve(pawn.address, SMALL_AMOUNT);
+    await mockPUSD.connect(user).approve(pawn.getAddress(), SMALL_AMOUNT);
     await pawn.connect(user).addLiquidity(SMALL_AMOUNT);
     const tvl = await pawn.totalLiquidity();
     expect(tvl).to.equal(SMALL_AMOUNT);
   });
 
   it("should allow adding liquidity", async function () {
-    await pUSD.connect(user).approve(pawn.address, SMALL_AMOUNT);
+    await mockPUSD.connect(user).approve(pawn.getAddress(), SMALL_AMOUNT);
     await expect(pawn.connect(user).addLiquidity(SMALL_AMOUNT))
       .to.emit(pawn, "LiquidityAdded")
       .withArgs(user.address, SMALL_AMOUNT);
   });
 
   it("should return total value locked (TVL) and APR correctly", async function () {
-    await pUSD.connect(user).approve(pawn.address, SMALL_AMOUNT);
+    await mockPUSD.connect(user).approve(pawn.getAddress(), SMALL_AMOUNT);
     await pawn.connect(user).addLiquidity(SMALL_AMOUNT);
 
     const tvl = await pawn.totalLiquidity();
@@ -64,12 +84,12 @@ describe("PlumePawn", function () {
     const durations = await pawn.getAllDurations();
     for (let d of durations) {
       const apr = await pawn.getInterestRate(d);
-      expect(apr.toNumber()).to.be.greaterThan(0);
+      expect(Number(apr)).to.be.greaterThan(0);
     }
   });
 
   it("should allow requesting and repaying a loan", async function () {
-    await pUSD.connect(user).approve(pawn.address, SMALL_AMOUNT * 10n);
+    await mockPUSD.connect(user).approve(pawn.getAddress(), SMALL_AMOUNT * 10n);
     await pawn.connect(user).addLiquidity(SMALL_AMOUNT * 10n);
 
     const duration = 30 * 24 * 60 * 60;
@@ -78,8 +98,8 @@ describe("PlumePawn", function () {
     expect(loans.length).to.eq(1);
 
     const repayAmount = loans[0].repayAmount;
-    await pUSD.mint(user.address, repayAmount);
-    await pUSD.connect(user).approve(pawn.address, repayAmount);
+    await mockPUSD.mint(user.address, repayAmount);
+    await mockPUSD.connect(user).approve(pawn.getAddress(), repayAmount);
 
     await pawn.connect(user).repayLoan(0);
     const updatedLoan = await pawn.getLoansByUser(user.address);
