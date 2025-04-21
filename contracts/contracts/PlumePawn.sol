@@ -11,7 +11,7 @@ interface IPlumeDummyRWA {
     function getTokenValue(uint256 tokenId) external view returns (uint256);
 }
 
-// TODO: menambahkan siapa yang add liquidity, menambahkan fungsi withdraw liquidty pada liquidity providernya + apr yang didapatkan.
+// TODO: menambahkan fungsi withdraw liquidty pada liquidity providernya + apr unclaimedReward yang didapatkan.
 // TODO: nambah platform fee ketika melakukan repay dengan transfer ke address
 // TODO: nambah platform fee ketika withdraw liquidty provider dengan transfer ke address
 // platform fee masukkan dalam variable baru, nanti owner bisa withdraw
@@ -45,6 +45,17 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
 
     Loan[] public loans;
     mapping(address => uint256[]) public userLoans;
+
+    struct DepositInfo {
+        uint256 amount;
+        uint256 apr;
+        uint256 depositTimestamp;
+        uint256 unclaimedReward;
+        bool withdrawn;
+    }
+
+    DepositInfo[] public allDeposits;
+    mapping(address => uint256[]) public userDeposits;
 
     event LiquidityAdded(address indexed provider, uint256 amount);
     event LiquidityWithdrawn(address indexed owner, uint256 amount);
