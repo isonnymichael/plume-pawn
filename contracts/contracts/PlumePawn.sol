@@ -11,6 +11,11 @@ interface IPlumeDummyRWA {
     function getTokenValue(uint256 tokenId) external view returns (uint256);
 }
 
+// TODO: menambahkan siapa yang add liquidity, menambahkan fungsi withdraw liquidty pada liquidity providernya + apr yang didapatkan.
+// TODO: nambah platform fee ketika melakukan repay dengan transfer ke address
+// TODO: nambah platform fee ketika withdraw liquidty provider dengan transfer ke address
+// platform fee masukkan dalam variable baru, nanti owner bisa withdraw
+
 contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     IERC20 public immutable pUSD;
     IERC721 public immutable RWA;
@@ -18,10 +23,12 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     uint256 public totalLiquidity;
     uint256 public totalBorrowed;
     uint256 public LTV = 70; // Loan-to-Value ratio in percentage
+    uint256 public APR = 12;  // APR ration in percentage
+    uint constant SECONDS_IN_YEAR = 365 * 24 * 60 * 60; // For APR calculation
 
     struct InterestRate {
         uint256 duration;
-        uint256 rate; // in percentage
+        uint256 rate;
     }
 
     InterestRate[] public interestRates;
@@ -45,6 +52,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     event LoanRepaid(uint256 indexed loanId);
     event LoanLiquidated(uint256 indexed loanId);
     event LTVUpdated(uint256 newLTV);
+    event APRUpdated(uint256 newApr);
     event InterestRateUpdated(uint256 duration, uint256 newRate);
 
     constructor(address _pUSD, address _RWA) Ownable(msg.sender) {
@@ -62,6 +70,12 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         require(newLTV > 0 && newLTV <= 100, "Invalid LTV");
         LTV = newLTV;
         emit LTVUpdated(newLTV);
+    }
+
+    function setAPR(uint256 newApr) external onlyOwner {
+        require(newApr > 0, "Invalid APR");
+        APR = newApr;
+        emit APRUpdated(newApr);
     }
 
     function setInterestRate(uint256 duration, uint256 rate) external onlyOwner {
@@ -103,14 +117,6 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         require(success, "Transfer failed");
         totalLiquidity += amount;
         emit LiquidityAdded(msg.sender, amount);
-    }
-
-    function withdrawLiquidity(uint256 amount) external onlyOwner nonReentrant {
-        require(amount <= totalLiquidity, "Not enough liquidity");
-        totalLiquidity -= amount;
-        bool success = pUSD.transfer(owner(), amount);
-        require(success, "Withdraw failed");
-        emit LiquidityWithdrawn(msg.sender, amount);
     }
 
     function requestLoan(uint256 tokenId, uint256 duration) external nonReentrant {

@@ -54,6 +54,13 @@ describe("PlumePawn", function () {
       180 * 24 * 60 * 60,
     ]);
   });
+
+  it("should return the correct Loan-to-Value (LTV) ratio", async function () {
+    const ltv = await pawn.LTV();
+    console.log("LTV:", ltv.toString());
+    expect(ltv).to.be.greaterThan(0);
+    expect(ltv).to.be.lte(100);
+  });
   
   it("should allow adding liquidity", async function () {
     const pawnAddress = await pawn.getAddress();
@@ -68,20 +75,16 @@ describe("PlumePawn", function () {
       .to.emit(pawn, "LiquidityAdded")
       .withArgs(user.address, SMALL_AMOUNT);
   });
-  
 
-  it("should return the correct Loan-to-Value (LTV) ratio", async function () {
-    const ltv = await pawn.LTV();
-    console.log("LTV:", ltv.toString());
-    expect(ltv).to.be.greaterThan(0);
-    expect(ltv).to.be.lte(100);
-  });
+  // TODO: update add liquidity berdasrkan update SC
+
+  // TODO: tambahkan test withdraw liquidity berdasrkan liquidity provider + APRnya
   
   it("should allow requesting and repaying a loan", async function () {
     const pawnAddress = await pawn.getAddress();
     console.log("Pawn contract address:", pawnAddress);
   
-    const liquidityAmount = parseUnits("1000000", 18);
+    const liquidityAmount = parseUnits("10000", 18);
     await mockPUSD.connect(user).approve(pawnAddress, liquidityAmount);
     await pawn.connect(user).addLiquidity(liquidityAmount);
     console.log("Liquidity added:", liquidityAmount.toString());
@@ -106,6 +109,8 @@ describe("PlumePawn", function () {
     console.log("Loan after repayment:", updatedLoan[0]);
     expect(updatedLoan[0].repaid).to.eq(true);
   });  
+
+  // TODO: tambahkan repay liquidated / sudah kadaluarsa, harusnya otomatis dari blockchain bukan? tidak trigger manual
 
   it("should calculate APR for liquidity providers", async function () {
     const liquidityAmount = parseUnits("13570", 18);
@@ -138,6 +143,4 @@ describe("PlumePawn", function () {
     expect(aprNumeric).to.be.lt(100);
   });
   
-  
-
 });
