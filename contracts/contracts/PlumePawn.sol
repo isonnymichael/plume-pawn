@@ -11,10 +11,13 @@ interface IPlumeDummyRWA {
     function getTokenValue(uint256 tokenId) external view returns (uint256);
 }
 
-// TODO: menambahkan fungsi withdraw liquidty pada liquidity providernya + apr unclaimedReward yang didapatkan.
+// TODO: update deposit info karena menambahkan fee amount
+// TODO: update add liquidity karena menggunakan history per deposit
+// TODO: menambahkan fungsi withdraw liquidty pada liquidity providernya / depositinfo + apr unclaimedReward yang didapatkan.
+// TODO: update loan karena menambahkan fee amount
 // TODO: nambah platform fee ketika melakukan repay dengan transfer ke address
-// TODO: nambah platform fee ketika withdraw liquidty provider dengan transfer ke address
-// platform fee masukkan dalam variable baru, nanti owner bisa withdraw
+// TODO: nambah platform fee ketika add liquidity / deposit
+// TODO: tambah fungsi owner withdraw fee
 
 contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     IERC20 public immutable pUSD;
@@ -25,6 +28,9 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     uint256 public LTV = 70; // Loan-to-Value ratio in percentage
     uint256 public APR = 12;  // APR ration in percentage
     uint constant SECONDS_IN_YEAR = 365 * 24 * 60 * 60; // For APR calculation
+    uint256 public platformDepositFeeBP = 25; // 0.25%
+    uint256 public platformRepaymentFeeBP = 200; // 2%
+    uint256 public totalPlatformFeesCollected;
 
     struct InterestRate {
         uint256 duration;
@@ -38,6 +44,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 tokenId;
         uint256 amount;
         uint256 repayAmount;
+        uint256 feeAmount;
         uint256 dueDate;
         bool repaid;
         bool liquidated;
@@ -48,6 +55,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
 
     struct DepositInfo {
         uint256 amount;
+        uint256 feeAmount;
         uint256 apr;
         uint256 depositTimestamp;
         uint256 unclaimedReward;
@@ -87,6 +95,14 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         require(newApr > 0, "Invalid APR");
         APR = newApr;
         emit APRUpdated(newApr);
+    }
+
+    function setPlatformFees(uint256 depositFeeBP, uint256 repaymentFeeBP) external onlyOwner {
+        require(depositFeeBP <= 500, "Max 5%");
+        require(repaymentFeeBP <= 2000, "Max 20%");
+
+        platformDepositFeeBP = depositFeeBP;
+        platformRepaymentFeeBP = repaymentFeeBP;
     }
 
     function setInterestRate(uint256 duration, uint256 rate) external onlyOwner {
