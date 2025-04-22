@@ -54,6 +54,11 @@ describe("PlumePawn", function () {
     const ltv = await pawn.LTV();
     expect(ltv).to.equal(70); // Default LTV is 70%
   });
+
+  it("should return APR", async function () {
+    const apr = await pawn.APR();
+    expect(apr).to.equal(12); // Default APR is 12%
+  });
   
   it("should add liquidity with fee deduction", async function () {
     const amount = parseUnits("100", 18);
@@ -195,4 +200,54 @@ describe("PlumePawn", function () {
     const remainingFees = await pawn.totalPlatformFeesCollected();
     expect(remainingFees).to.equal(0);
   });
+
+  it("should return loans associated with the user", async function () {
+    // Add liquidity
+    await pawn.connect(user).addLiquidity(parseUnits("10000", 18));
+  
+    // Request a loan
+    const duration = 30 * 24 * 60 * 60; // 30 days
+    const beforeRequest = await time.latest();
+    await pawn.connect(user).requestLoan(tokenId, duration);
+  
+    // Get all loans for the user
+    const loans = await pawn.getLoansByUser(user.address);
+    expect(loans.length).to.be.greaterThan(0);
+  
+    const loan = loans[0];
+  
+    // Assertions
+    expect(loan[0]).to.equal(user.address);
+    expect(loan[1]).to.equal(tokenId);
+    expect(loan[2]).to.be.gt(0);
+    expect(loan[3]).to.be.gt(0);
+    expect(loan[4]).to.be.gt(0);
+    expect(loan[5]).to.be.closeTo(beforeRequest + duration, 5);
+    expect(loan[6]).to.be.false;
+  });
+
+  it("should return deposits associated with the user", async function () {
+    // User adds liquidity
+    const depositAmount = parseUnits("1000", 18); // 1000 PUSD
+    const depositFeeBP = 25n; // 0.25% (default)
+    const feeAmount = depositAmount * depositFeeBP / 10000n;
+    const expectedNetDeposit = depositAmount - feeAmount;
+    await pawn.connect(user).addLiquidity(depositAmount);
+  
+    // Retrieve deposits
+    const deposits = await pawn.getDepositsByUser(user.address);
+    expect(deposits.length).to.be.greaterThan(0);
+  
+    const deposit = deposits[0];
+  
+    // Assertions
+    expect(deposit[0]).to.equal(expectedNetDeposit);
+    expect(deposit[1]).to.be.gt(0);
+    expect(deposit[2]).to.be.gt(0);
+    expect(deposit[3]).to.be.gt(0);
+    expect(deposit[4]).to.equal(0);
+    expect(deposit[5]).to.be.gt(0);
+    expect(deposit[6]).to.be.false;
+  });
+  
 });
