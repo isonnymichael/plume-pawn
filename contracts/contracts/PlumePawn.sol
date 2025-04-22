@@ -66,6 +66,17 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     event InterestRateUpdated(uint256 duration, uint256 newRate);
     event PlatformFeeWithdrawn(uint256 amount);
 
+    /**
+     * Initializes the contract with the addresses of the pUSD token and 
+     * the RWA NFT contract. Also sets up default interest rate options.
+     * 
+     * @param _pUSD Address of the pUSD ERC20 token contract.
+     * @param _RWA Address of the RWA ERC721 token contract.
+     *
+     * Requirements:
+     * - `_pUSD` must not be the zero address.
+     * - `_RWA` must not be the zero address.
+     */
     constructor(address _pUSD, address _RWA) Ownable(msg.sender) {
         require(_pUSD != address(0), "Invalid pUSD address");
         require(_RWA != address(0), "Invalid RWA address");
@@ -77,18 +88,41 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         interestRates.push(InterestRate(180 days, 15));
     }
 
+    /**
+     * Sets the Loan-to-Value (LTV) ratio for the platform.
+     * Can only be called by the contract owner.
+     *
+     * @param newLTV The new LTV percentage (must be between 1 and 100).
+     *
+     * Emits an {LTVUpdated} event.
+     */
     function setLTV(uint256 newLTV) external onlyOwner {
         require(newLTV > 0 && newLTV <= 100, "Invalid LTV");
         LTV = newLTV;
         emit LTVUpdated(newLTV);
     }
 
+    /**
+     * Updates the Annual Percentage Rate (APR) for loans.
+     * Can only be called by the contract owner.
+     *
+     * @param newApr The new APR value (must be greater than 0).
+     *
+     * Emits an {APRUpdated} event.
+     */
     function setAPR(uint256 newApr) external onlyOwner {
         require(newApr > 0, "Invalid APR");
         APR = newApr;
         emit APRUpdated(newApr);
     }
 
+    /**
+     * Sets the platform fees for deposits and repayments.
+     * Can only be called by the contract owner.
+     *
+     * @param depositFeeBP Deposit fee in basis points (max 500 = 5%).
+     * @param repaymentFeeBP Repayment fee in basis points (max 2000 = 20%).
+     */
     function setPlatformFees(uint256 depositFeeBP, uint256 repaymentFeeBP) external onlyOwner {
         require(depositFeeBP <= 500, "Max 5%");
         require(repaymentFeeBP <= 2000, "Max 20%");
@@ -97,6 +131,16 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         platformRepaymentFeeBP = repaymentFeeBP;
     }
 
+    /**
+     * Updates or adds an interest rate based on loan duration.
+     * If the duration exists, the rate is updated; otherwise, a new entry is added.
+     * Only callable by the contract owner.
+     *
+     * @param duration Loan duration in seconds.
+     * @param rate Interest rate percentage for the given duration.
+     *
+     * Emits an {InterestRateUpdated} event.
+     */
     function setInterestRate(uint256 duration, uint256 rate) external onlyOwner {
         require(rate > 0, "Invalid rate");
         bool updated = false;
@@ -113,6 +157,13 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         emit InterestRateUpdated(duration, rate);
     }
 
+    /**
+     * Returns the interest rate associated with a given loan duration.
+     * Reverts if the duration is not supported.
+     *
+     * @param duration Loan duration in seconds.
+     * @return Interest rate percentage for the specified duration.
+     */
     function getInterestRate(uint256 duration) public view returns (uint256) {
         for (uint256 i = 0; i < interestRates.length; i++) {
             if (interestRates[i].duration == duration) {
@@ -122,6 +173,11 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         revert("Duration not supported");
     }
 
+    /**
+     * Returns an array of all supported loan durations.
+     *
+     * @return Array of loan durations in seconds.
+     */
     function getAllDurations() external view returns (uint256[] memory) {
         uint256[] memory durations = new uint256[](interestRates.length);
         for (uint256 i = 0; i < interestRates.length; i++) {
@@ -130,20 +186,26 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         return durations;
     }
 
+    /**
+     * Allows users to add liquidity in pUSD to the platform.
+     * A deposit fee is deducted and recorded. The net amount is stored
+     * along with deposit metadata. Rewards are tracked per deposit.
+     *
+     * @param amount The total amount of pUSD to deposit (must be > 0).
+     *
+     * Emits a {LiquidityAdded} event.
+     */
     function addLiquidity(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
         
-        // Calculate platform fee
         uint256 feeAmount = (amount * platformDepositFeeBP) / 10000;
         uint256 depositAmount = amount - feeAmount;
 
         bool success = pUSD.transferFrom(msg.sender, address(this), amount);
         require(success, "Transfer failed");
         
-        // Add to platform fees
         totalPlatformFeesCollected += feeAmount;
         
-        // Create deposit record
         allDeposits.push(DepositInfo({
             amount: depositAmount,
             feeAmount: feeAmount,
@@ -161,12 +223,20 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         emit LiquidityAdded(msg.sender, depositAmount, feeAmount);
     }
 
+    /**
+     * Withdraws a specific deposit along with its unclaimed rewards.
+     * Validates ownership and withdrawal status, updates rewards,
+     * and transfers the total amount to the user.
+     *
+     * @param depositId ID of the deposit to withdraw.
+     *
+     * Emits a {LiquidityWithdrawn} event.
+     */
     function withdrawLiquidity(uint256 depositId) external nonReentrant {
         require(depositId < allDeposits.length, "Invalid deposit ID");
         DepositInfo storage deposit = allDeposits[depositId];
         require(!deposit.withdrawn, "Already withdrawn");
         
-        // Calculate unclaimed reward up to now
         _updateReward(deposit);
         
         uint256 totalAmount = deposit.amount + deposit.unclaimedReward;
@@ -181,6 +251,12 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         emit LiquidityWithdrawn(msg.sender, deposit.amount, deposit.unclaimedReward);
     }
 
+    /**
+     * Updates the unclaimed reward for a given deposit based on
+     * the time elapsed since the last reward calculation.
+     *
+     * @param deposit Reference to the DepositInfo struct to update.
+     */
     function _updateReward(DepositInfo storage deposit) internal {
         uint256 timeElapsed = block.timestamp - deposit.lastRewardCalculation;
         if (timeElapsed > 0) {
@@ -190,6 +266,14 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         }
     }
 
+    /**
+     * Returns the total unclaimed reward for a specific deposit,
+     * including any rewards accumulated since the last calculation.
+     * Returns 0 if the deposit has been withdrawn.
+     *
+     * @param depositId ID of the deposit.
+     * @return Total unclaimed reward in pUSD.
+     */
     function getUnclaimedReward(uint256 depositId) public view returns (uint256) {
         require(depositId < allDeposits.length, "Invalid deposit ID");
         DepositInfo storage deposit = allDeposits[depositId];
@@ -203,6 +287,16 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         return deposit.unclaimedReward + additionalReward;
     }
 
+    /**
+     * Allows users to request a loan by pledging an RWA token as collateral.
+     * The loan amount is based on the token's value and the platform's LTV.
+     * The loan is transferred in pUSD, and the token is held as collateral.
+     * 
+     * @param tokenId ID of the RWA token being used as collateral.
+     * @param duration Loan duration in seconds.
+     *
+     * Emits a {LoanRequested} event.
+     */
     function requestLoan(uint256 tokenId, uint256 duration) external nonReentrant {
         require(RWA.ownerOf(tokenId) == msg.sender, "Not token owner");
 
@@ -240,6 +334,14 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         emit LoanRequested(loanId, msg.sender, tokenId, loanAmount);
     }
 
+    /**
+     * Allows the borrower to repay the loan along with applicable fees.
+     * If successful, the collateral RWA token is returned and the loan is marked as repaid.
+     * 
+     * @param loanId ID of the loan to be repaid.
+     *
+     * Emits a {LoanRepaid} event.
+     */
     function repayLoan(uint256 loanId) external nonReentrant {
         Loan storage loan = loans[loanId];
         require(msg.sender == loan.borrower, "Not borrower");
@@ -249,10 +351,8 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         bool success = pUSD.transferFrom(msg.sender, address(this), loan.repayAmount);
         require(success, "Repayment failed");
 
-        // Transfer fee to platform
         totalPlatformFeesCollected += loan.feeAmount;
         
-        // Return collateral
         RWA.safeTransferFrom(address(this), msg.sender, loan.tokenId);
 
         loan.repaid = true;
@@ -262,6 +362,11 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         emit LoanRepaid(loanId, loan.feeAmount);
     }
 
+    /**
+     * Allows the contract owner to withdraw accumulated platform fees in pUSD.
+     * 
+     * Emits a {PlatformFeeWithdrawn} event.
+     */
     function withdrawPlatformFees() external onlyOwner nonReentrant {
         require(totalPlatformFeesCollected > 0, "No fees to withdraw");
         uint256 amount = totalPlatformFeesCollected;
@@ -273,6 +378,12 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         emit PlatformFeeWithdrawn(amount);
     }
 
+    /**
+     * Returns a list of loans associated with a specific user.
+     * 
+     * @param user Address of the user whose loans are to be retrieved.
+     * @return Array of Loan structs associated with the user.
+     */
     function getLoansByUser(address user) external view returns (Loan[] memory) {
         uint256[] memory ids = userLoans[user];
         Loan[] memory result = new Loan[](ids.length);
