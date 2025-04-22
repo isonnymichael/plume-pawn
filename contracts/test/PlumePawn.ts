@@ -1,4 +1,3 @@
-// test/PlumePawn.ts
 import { expect } from "chai";
 import { parseUnits } from "ethers";
 import hre from "hardhat"
