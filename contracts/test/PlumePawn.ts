@@ -1,8 +1,7 @@
 import { expect } from "chai";
 import { parseUnits } from "ethers";
 import hre from "hardhat"
-
-const SMALL_AMOUNT = parseUnits("0.1", 18);
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("PlumePawn", function () {
   let pawn: any;
@@ -36,16 +35,13 @@ describe("PlumePawn", function () {
 
     const pawnAddress = await pawn.getAddress();
 
-    await mockRWA.connect(user).approve(pawnAddress, 1);
-
+    await mockRWA.connect(user).approve(pawnAddress, tokenId);
     await mockPUSD.connect(user).approve(pawnAddress, parseUnits("1000000", 18));
   });  
 
   it("should return all interest durations", async function () {
     const durations = await pawn.getAllDurations();
     const durationNums = durations.map((d: bigint) => Number(d));
-
-    console.log("Durations: ", durationNums);
   
     expect(durationNums).to.include.members([
       30 * 24 * 60 * 60,
@@ -56,90 +52,119 @@ describe("PlumePawn", function () {
 
   it("should return the correct Loan-to-Value (LTV) ratio", async function () {
     const ltv = await pawn.LTV();
-    console.log("LTV:", ltv.toString());
-    expect(ltv).to.be.greaterThan(0);
-    expect(ltv).to.be.lte(100);
+    expect(ltv).to.equal(70); // Default LTV is 70%
   });
   
-  it("should allow adding liquidity", async function () {
-    const pawnAddress = await pawn.getAddress();
-  
-    console.log("User address:", user.address);
-    console.log("Pawn contract address:", pawnAddress);
-    console.log("Amount to add as liquidity:", SMALL_AMOUNT.toString());
-  
-    await mockPUSD.connect(user).approve(pawnAddress, SMALL_AMOUNT);
-  
-    await expect(pawn.connect(user).addLiquidity(SMALL_AMOUNT))
+  it("should add liquidity with fee deduction", async function () {
+    const amount = parseUnits("100", 18);
+    const expectedFee = amount * 25n / 10000n; // 0.25% fee
+    const expectedDeposit = amount - expectedFee;
+
+    await expect(pawn.connect(user).addLiquidity(amount))
       .to.emit(pawn, "LiquidityAdded")
-      .withArgs(user.address, SMALL_AMOUNT);
+      .withArgs(user.address, expectedDeposit, expectedFee);
+
+    // Check platform fees collected
+    const fees = await pawn.totalPlatformFeesCollected();
+    expect(fees).to.equal(expectedFee);
+
+    // Check user deposit
+    const deposits = await pawn.getDepositsByUser(user.address);
+    expect(deposits[0].amount).to.equal(expectedDeposit);
+    expect(deposits[0].feeAmount).to.equal(expectedFee);
   });
 
-  // TODO: update add liquidity berdasrkan update SC
+  it("should allow withdrawing liquidity with rewards", async function () {
+    // Add liquidity
+    const amount = parseUnits("1000", 18);
+    await pawn.connect(user).addLiquidity(amount);
 
-  // TODO: tambahkan test withdraw liquidity berdasrkan liquidity provider + APRnya
-  
-  it("should allow requesting and repaying a loan", async function () {
-    const pawnAddress = await pawn.getAddress();
-    console.log("Pawn contract address:", pawnAddress);
-  
-    const liquidityAmount = parseUnits("10000", 18);
-    await mockPUSD.connect(user).approve(pawnAddress, liquidityAmount);
-    await pawn.connect(user).addLiquidity(liquidityAmount);
-    console.log("Liquidity added:", liquidityAmount.toString());
-  
+    // Fast forward 30 days for APR rewards
+    await time.increase(30 * 24 * 60 * 60);
+
+    // Withdraw liquidity
+    const depositId = 0;
+    await expect(pawn.connect(user).withdrawLiquidity(depositId))
+      .to.emit(pawn, "LiquidityWithdrawn");
+
+    // Verify deposit is marked as withdrawn
+    const deposits = await pawn.getDepositsByUser(user.address);
+    expect(deposits[0].withdrawn).to.be.true;
+  });
+
+  it("should calculate correct unclaimed rewards", async function () {
+    const amount = parseUnits("5000", 18);
+    await pawn.connect(user).addLiquidity(amount);
+
+    // Check initial reward (should be 0)
+    let reward = await pawn.getUnclaimedReward(0);
+    expect(reward).to.equal(0);
+
+    // Fast forward 1 year
+    await time.increase(365 * 24 * 60 * 60);
+
+    // Check reward after 1 year (12% APR)
+    reward = await pawn.getUnclaimedReward(0);
+    const expectedReward = amount * 12n / 100n;
+    expect(reward).to.be.closeTo(expectedReward, expectedReward / 100n); // 1% tolerance
+  });
+
+  it("should request and repay loan with fee", async function () {
+    // Add liquidity first
+    await pawn.connect(user).addLiquidity(parseUnits("10000", 18));
+
+    // Request loan
     const duration = 30 * 24 * 60 * 60;
-    console.log("Requesting loan with duration:", duration);
     await pawn.connect(user).requestLoan(tokenId, duration);
-  
+
+    // Check loan details
     const loans = await pawn.getLoansByUser(user.address);
-    console.log("Loans after requesting:", loans);
-    expect(loans.length).to.eq(1);
-  
-    const repayAmount = loans[0].repayAmount;
-    console.log("Repay amount:", repayAmount.toString());
-  
+    const loan = loans[0];
+    expect(loan.feeAmount).to.be.gt(0);
+
+    // Repay loan
+    const repayAmount = loan.repayAmount;
     await mockPUSD.mint(user.address, repayAmount);
-    await mockPUSD.connect(user).approve(pawnAddress, repayAmount);
-  
-    await pawn.connect(user).repayLoan(0);
-  
-    const updatedLoan = await pawn.getLoansByUser(user.address);
-    console.log("Loan after repayment:", updatedLoan[0]);
-    expect(updatedLoan[0].repaid).to.eq(true);
-  });  
-
-  // TODO: tambahkan repay liquidated / sudah kadaluarsa, harusnya otomatis dari blockchain bukan? tidak trigger manual
-
-  it("should calculate APR for liquidity providers", async function () {
-    const liquidityAmount = parseUnits("13570", 18);
-    await mockPUSD.connect(user).approve(pawn.getAddress(), liquidityAmount);
-    await pawn.connect(user).addLiquidity(liquidityAmount);
     
-    const duration = 30 * 24 * 60 * 60;
-    console.log("Requesting loan with duration:", duration);
-    await pawn.connect(user).requestLoan(tokenId, duration);
-  
-    const totalLiquidity = await pawn.totalLiquidity();
-    const totalBorrowed = await pawn.totalBorrowed();
+    await expect(pawn.connect(user).repayLoan(0))
+      .to.emit(pawn, "LoanRepaid")
+      .withArgs(0, loan.feeAmount);
 
-    console.log("Total Liquidity:", totalLiquidity.toString());
-    console.log("Total Borrowed:", totalBorrowed.toString());
-    
-    const totalBorrowedBigInt = BigInt(totalBorrowed.toString());
-    const totalLiquidityBigInt = BigInt(totalLiquidity.toString());
-  
-    const aprScaled = (totalBorrowedBigInt * 10000n) / totalLiquidityBigInt;
-
-    const aprWhole = aprScaled / 100n;
-    const aprDecimal = aprScaled % 100n;
-    const aprFormatted = `${aprWhole}.${aprDecimal.toString().padStart(2, '0')}%`;
-    const aprNumeric = parseFloat(aprFormatted.replace("%", ""));
-
-    console.log("Current APR (percentage):", aprFormatted);
-    
-    expect(aprNumeric).to.be.gt(0);
-    expect(aprNumeric).to.be.lt(100);
+    // Check fee collection
+    const fees = await pawn.totalPlatformFeesCollected();
+    expect(fees).to.equal(loan.feeAmount);
   });
-  
+
+  it("should handle expired loans automatically", async function () {
+    // Add liquidity and request loan
+    await pawn.connect(user).addLiquidity(parseUnits("10000", 18));
+    const duration = 30 * 24 * 60 * 60;
+    await pawn.connect(user).requestLoan(tokenId, duration);
+
+    // Fast forward past due date
+    await time.increase(duration + 1);
+
+    // Check loan status
+    const loan = (await pawn.getLoansByUser(user.address))[0];
+    expect(loan.repaid).to.be.false;
+
+    // NFT should remain in contract ownership
+    const nftOwner = await mockRWA.ownerOf(tokenId);
+    expect(nftOwner).to.equal(await pawn.getAddress());
+  });
+
+  it("should allow owner to withdraw platform fees", async function () {
+    // Generate some fees
+    await pawn.connect(user).addLiquidity(parseUnits("1000", 18));
+    const initialFees = await pawn.totalPlatformFeesCollected();
+
+    // Withdraw fees
+    await expect(pawn.connect(owner).withdrawPlatformFees())
+      .to.emit(pawn, "PlatformFeeWithdrawn")
+      .withArgs(initialFees);
+
+    // Check fees are reset
+    const remainingFees = await pawn.totalPlatformFeesCollected();
+    expect(remainingFees).to.equal(0);
+  });
 });

@@ -393,6 +393,21 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         return result;
     }
 
+    /**
+     * Returns a list of deposits associated with a specific user.
+     * 
+     * @param user Address of the user whose deposits are to be retrieved.
+     * @return Array of DepositInfo structs associated with the user.
+     */
+    function getDepositsByUser(address user) external view returns (DepositInfo[] memory) {
+        uint256[] memory ids = userDeposits[user];
+        DepositInfo[] memory result = new DepositInfo[](ids.length);
+        for (uint256 i = 0; i < ids.length; i++) {
+            result[i] = allDeposits[ids[i]];
+        }
+        return result;
+    }
+
     function onERC721Received(
         address,
         address,
