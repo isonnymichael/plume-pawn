@@ -11,14 +11,6 @@ interface IPlumeDummyRWA {
     function getTokenValue(uint256 tokenId) external view returns (uint256);
 }
 
-// TODO: update deposit info karena menambahkan fee amount
-// TODO: update add liquidity karena menggunakan history per deposit
-// TODO: menambahkan fungsi withdraw liquidty pada liquidity providernya / depositinfo + apr unclaimedReward yang didapatkan.
-// TODO: update loan karena menambahkan fee amount
-// TODO: nambah platform fee ketika melakukan repay dengan transfer ke address
-// TODO: nambah platform fee ketika add liquidity / deposit
-// TODO: tambah fungsi owner withdraw fee
-
 contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     IERC20 public immutable pUSD;
     IERC721 public immutable RWA;
@@ -47,7 +39,6 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 feeAmount;
         uint256 dueDate;
         bool repaid;
-        bool liquidated;
     }
 
     Loan[] public loans;
@@ -59,20 +50,21 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         uint256 apr;
         uint256 depositTimestamp;
         uint256 unclaimedReward;
+        uint256 lastRewardCalculation;
         bool withdrawn;
     }
 
     DepositInfo[] public allDeposits;
     mapping(address => uint256[]) public userDeposits;
 
-    event LiquidityAdded(address indexed provider, uint256 amount);
-    event LiquidityWithdrawn(address indexed owner, uint256 amount);
+    event LiquidityAdded(address indexed provider, uint256 amount, uint256 feeAmount);
+    event LiquidityWithdrawn(address indexed owner, uint256 amount, uint256 reward);
     event LoanRequested(uint256 indexed loanId, address indexed borrower, uint256 tokenId, uint256 amount);
-    event LoanRepaid(uint256 indexed loanId);
-    event LoanLiquidated(uint256 indexed loanId);
+    event LoanRepaid(uint256 indexed loanId, uint256 feeAmount);
     event LTVUpdated(uint256 newLTV);
     event APRUpdated(uint256 newApr);
     event InterestRateUpdated(uint256 duration, uint256 newRate);
+    event PlatformFeeWithdrawn(uint256 amount);
 
     constructor(address _pUSD, address _RWA) Ownable(msg.sender) {
         require(_pUSD != address(0), "Invalid pUSD address");
@@ -140,10 +132,75 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
 
     function addLiquidity(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
+        
+        // Calculate platform fee
+        uint256 feeAmount = (amount * platformDepositFeeBP) / 10000;
+        uint256 depositAmount = amount - feeAmount;
+
         bool success = pUSD.transferFrom(msg.sender, address(this), amount);
         require(success, "Transfer failed");
-        totalLiquidity += amount;
-        emit LiquidityAdded(msg.sender, amount);
+        
+        // Add to platform fees
+        totalPlatformFeesCollected += feeAmount;
+        
+        // Create deposit record
+        allDeposits.push(DepositInfo({
+            amount: depositAmount,
+            feeAmount: feeAmount,
+            apr: APR,
+            depositTimestamp: block.timestamp,
+            unclaimedReward: 0,
+            lastRewardCalculation: block.timestamp,
+            withdrawn: false
+        }));
+        
+        uint256 depositId = allDeposits.length - 1;
+        userDeposits[msg.sender].push(depositId);
+        
+        totalLiquidity += depositAmount;
+        emit LiquidityAdded(msg.sender, depositAmount, feeAmount);
+    }
+
+    function withdrawLiquidity(uint256 depositId) external nonReentrant {
+        require(depositId < allDeposits.length, "Invalid deposit ID");
+        DepositInfo storage deposit = allDeposits[depositId];
+        require(!deposit.withdrawn, "Already withdrawn");
+        
+        // Calculate unclaimed reward up to now
+        _updateReward(deposit);
+        
+        uint256 totalAmount = deposit.amount + deposit.unclaimedReward;
+        require(totalAmount <= totalLiquidity, "Insufficient liquidity");
+        
+        bool success = pUSD.transfer(msg.sender, totalAmount);
+        require(success, "Transfer failed");
+        
+        deposit.withdrawn = true;
+        totalLiquidity -= totalAmount;
+        
+        emit LiquidityWithdrawn(msg.sender, deposit.amount, deposit.unclaimedReward);
+    }
+
+    function _updateReward(DepositInfo storage deposit) internal {
+        uint256 timeElapsed = block.timestamp - deposit.lastRewardCalculation;
+        if (timeElapsed > 0) {
+            uint256 additionalReward = (deposit.amount * deposit.apr * timeElapsed) / (SECONDS_IN_YEAR * 100);
+            deposit.unclaimedReward += additionalReward;
+            deposit.lastRewardCalculation = block.timestamp;
+        }
+    }
+
+    function getUnclaimedReward(uint256 depositId) public view returns (uint256) {
+        require(depositId < allDeposits.length, "Invalid deposit ID");
+        DepositInfo storage deposit = allDeposits[depositId];
+        
+        if (deposit.withdrawn) {
+            return 0;
+        }
+        
+        uint256 timeElapsed = block.timestamp - deposit.lastRewardCalculation;
+        uint256 additionalReward = (deposit.amount * deposit.apr * timeElapsed) / (SECONDS_IN_YEAR * 100);
+        return deposit.unclaimedReward + additionalReward;
     }
 
     function requestLoan(uint256 tokenId, uint256 duration) external nonReentrant {
@@ -158,6 +215,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         require(totalLiquidity >= loanAmount, "Insufficient liquidity");
 
         uint256 repayAmount = loanAmount + ((loanAmount * interest) / 100);
+        uint256 feeAmount = (repayAmount * platformRepaymentFeeBP) / 10000;
 
         RWA.safeTransferFrom(msg.sender, address(this), tokenId);
         bool success = pUSD.transfer(msg.sender, loanAmount);
@@ -168,9 +226,9 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
             tokenId: tokenId,
             amount: loanAmount,
             repayAmount: repayAmount,
+            feeAmount: feeAmount,
             dueDate: block.timestamp + duration,
-            repaid: false,
-            liquidated: false
+            repaid: false
         }));
 
         uint256 loanId = loans.length - 1;
@@ -185,28 +243,34 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     function repayLoan(uint256 loanId) external nonReentrant {
         Loan storage loan = loans[loanId];
         require(msg.sender == loan.borrower, "Not borrower");
-        require(!loan.repaid && !loan.liquidated, "Loan resolved");
+        require(!loan.repaid, "Loan resolved");
         require(block.timestamp <= loan.dueDate, "Loan overdue");
 
         bool success = pUSD.transferFrom(msg.sender, address(this), loan.repayAmount);
         require(success, "Repayment failed");
 
+        // Transfer fee to platform
+        totalPlatformFeesCollected += loan.feeAmount;
+        
+        // Return collateral
         RWA.safeTransferFrom(address(this), msg.sender, loan.tokenId);
 
         loan.repaid = true;
         totalBorrowed -= loan.amount;
-        totalLiquidity += loan.repayAmount;
+        totalLiquidity += (loan.repayAmount - loan.feeAmount);
 
-        emit LoanRepaid(loanId);
+        emit LoanRepaid(loanId, loan.feeAmount);
     }
 
-    function liquidateLoan(uint256 loanId) external onlyOwner nonReentrant {
-        Loan storage loan = loans[loanId];
-        require(!loan.repaid && !loan.liquidated, "Loan resolved");
-        require(block.timestamp > loan.dueDate, "Not overdue");
-
-        loan.liquidated = true;
-        emit LoanLiquidated(loanId);
+    function withdrawPlatformFees() external onlyOwner nonReentrant {
+        require(totalPlatformFeesCollected > 0, "No fees to withdraw");
+        uint256 amount = totalPlatformFeesCollected;
+        totalPlatformFeesCollected = 0;
+        
+        bool success = pUSD.transfer(msg.sender, amount);
+        require(success, "Transfer failed");
+        
+        emit PlatformFeeWithdrawn(amount);
     }
 
     function getLoansByUser(address user) external view returns (Loan[] memory) {
