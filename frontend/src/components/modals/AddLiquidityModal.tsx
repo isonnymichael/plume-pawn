@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Button, Typography, Alert, notification } from 'antd';
-import { ensureAllowanceThenAddLiquidity } from '../../lib/contracts'
+import { ensureAllowanceThenAddLiquidity } from '../../contracts/deposit'
+import { getTokenBalance } from '../../contracts/token'
 import { useSendTransaction, useActiveAccount } from 'thirdweb/react'
+import useSettingStore from '../../stores/settingStore';
+import { Skeleton } from 'antd';
 
 const { Text } = Typography;
 
@@ -17,8 +20,9 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   onSubmit
 }) => {
   const [form] = Form.useForm();
-  const [currentAPR] = useState("12%");
   const { mutate: sendTransaction, isPending } = useSendTransaction();
+  const { APR, isAPRLoading } = useSettingStore();
+  const [balance, setBalance] = useState('0');
   const account = useActiveAccount();
 
   const handleSubmit = async (values: { amount: string }) => {
@@ -34,7 +38,7 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           });
           onSubmit(values);
           form.resetFields();
-          onClose();
+          setBalance(prev => (parseFloat(prev) - parseFloat(values.amount)).toFixed(6))
         },
         onError: (error) => {
           notification.error({
@@ -53,6 +57,17 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
       form.resetFields();
     }
   }, [visible, form]);
+
+  useEffect(() => {
+      const fetchBalance = async () => {
+          if (account?.address) {
+              const userBalance = await getTokenBalance(account?.address);
+              setBalance(userBalance);
+          }
+      };
+      
+      fetchBalance();
+  }, [account, balance]);
 
   return (
     <Modal
@@ -88,19 +103,34 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
             message: 'Please enter amount' 
           }]}
         >
-          <Input 
-            type="number" 
-            placeholder="Enter pUSD amount" 
-            addonAfter="pUSD"
-          />
+          <div className="space-y-1">
+            <Input 
+              type="number" 
+              placeholder="Enter pUSD amount" 
+              addonAfter="pUSD"
+            />
+            <Text type="secondary" className="text-xs block">
+              Balance: {balance} pUSD
+            </Text>
+          </div>
         </Form.Item>
 
         <div className="mb-4 p-4 bg-gray-50 rounded-lg">
           <div className="flex justify-between items-center">
             <Text strong>Current APR:</Text>
-            <Text strong className="text-green-600 text-lg">
-              {currentAPR}
-            </Text>
+
+            {isAPRLoading ? (
+                <Skeleton.Input 
+                  active 
+                  size="small" 
+                  style={{ width: 60 }} 
+                  className="[&_.ant-skeleton-input]:!h-6"
+                />
+              ) : (
+                <Text strong className="text-green-600 text-lg">
+                  {APR}%
+                </Text>
+              )}
           </div>
         </div>
 

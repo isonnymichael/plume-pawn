@@ -10,6 +10,7 @@ const { TabPane } = Tabs;
 
 const Dashboard: React.FC = () => {
 
+  // DUMMY
   const loans: LoanType[] = [
     {
       key: 1,
@@ -36,7 +37,6 @@ const Dashboard: React.FC = () => {
       status: "Liquidated",
     },
   ];
-
   const liquidityPositions: LiquidityPosition[] = [
     {
       key: 1,
@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
       apr: "9.5%",
     }
   ];
-
+  // END OF DUMMY
   return (
     <div className="bg-[#F9F9F9] min-h-screen">
       <section className="text-black py-32 px-6 font-sans max-w-6xl mx-auto">

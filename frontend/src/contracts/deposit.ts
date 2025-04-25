@@ -1,11 +1,11 @@
 import { getContract, prepareContractCall, readContract, sendTransaction, waitForReceipt } from "thirdweb";
-import { plumeTestnet } from './chain';
-import { thirdWebClient } from './client';
+import { plumeTestnet } from '../lib/chain';
+import { thirdWebClient } from '../lib/client';
 import { parseUnits } from "ethers";
 import { PrepareLiquidityArgs } from '../types/deposit';
+import { tokenContract } from './token';
 
 const pawnContractAddress = "0xAeC5e1c78a8726634Ad1C3c45C59bbC4f1Fd5c22";
-const tokenContractAddress = "0x1E0E030AbCb4f07de629DCCEa458a271e0E82624"; 
 
 export const plumePawnContract = getContract({
     client: thirdWebClient,
@@ -13,11 +13,19 @@ export const plumePawnContract = getContract({
     chain: plumeTestnet,
 });
 
-const tokenContract = getContract({
-    client: thirdWebClient,
-    address: tokenContractAddress,
-    chain: plumeTestnet,
-});
+export async function getAPR(): Promise<string> {
+  try {
+    const apr = await readContract({
+      contract: plumePawnContract,
+      method: "function APR() view returns (uint256)",
+    });
+    
+    return apr.toString();
+  } catch (error) {
+    console.error("Failed to fetch APR:", error);
+    return '-';
+  }
+}
 
 export async function ensureAllowanceThenAddLiquidity({
     amount,
@@ -57,4 +65,3 @@ export async function ensureAllowanceThenAddLiquidity({
       params: [parsedAmount],
     });
 }
-  

@@ -5,6 +5,7 @@ import { DollarOutlined } from '@ant-design/icons';
 import { LiquidityPosition } from '../../types/loan';
 
 export const LiquidityInterface: React.FC<{ positions: LiquidityPosition[] }> = ({ positions }) => {
+
   // Liquidity provider columns.
   const liquidityColumns: ColumnsType<LiquidityPosition> = [
     {
