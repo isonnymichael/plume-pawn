@@ -4,6 +4,7 @@ import { ensureAllowanceThenAddLiquidity } from '../../contracts/deposit'
 import { getTokenBalance } from '../../contracts/token'
 import { useSendTransaction, useActiveAccount } from 'thirdweb/react'
 import useSettingStore from '../../stores/settingStore';
+import useAuthStore from '../../stores/authStore';
 import { Skeleton } from 'antd';
 
 const { Text } = Typography;
@@ -22,7 +23,7 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   const [form] = Form.useForm();
   const { mutate: sendTransaction, isPending } = useSendTransaction();
   const { APR, isAPRLoading } = useSettingStore();
-  const [balance, setBalance] = useState('0');
+  const { balance, setBalance } = useAuthStore();
   const account = useActiveAccount();
 
   const handleSubmit = async (values: { amount: string }) => {
@@ -38,7 +39,9 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           });
           onSubmit(values);
           form.resetFields();
-          setBalance(prev => (parseFloat(prev) - parseFloat(values.amount)).toFixed(6))
+          setBalance(
+            (parseFloat(balance || "0") - parseFloat(values.amount || "0")).toFixed(6)
+          );
         },
         onError: (error) => {
           notification.error({

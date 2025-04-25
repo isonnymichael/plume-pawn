@@ -1,7 +1,7 @@
 import { getContract, prepareContractCall, readContract, sendTransaction, waitForReceipt } from "thirdweb";
 import { plumeTestnet } from '../lib/chain';
 import { thirdWebClient } from '../lib/client';
-import { parseUnits } from "ethers";
+import { parseUnits, formatUnits } from "ethers";
 import { PrepareLiquidityArgs } from '../types/deposit';
 import { tokenContract } from './token';
 
@@ -64,4 +64,30 @@ export async function ensureAllowanceThenAddLiquidity({
       method: "function addLiquidity(uint256 amount)",
       params: [parsedAmount],
     });
+}
+
+export async function getDepositsByUser(address: string) {
+  try {
+
+    const result: any[] = await readContract({
+      contract: plumePawnContract,
+      method: "function getDepositsByUser(address) view returns ((uint256 amount, uint256 feeAmount, uint256 apr, uint256 depositTimestamp, uint256 unclaimedReward, uint256 lastRewardCalculation, bool withdrawn)[])" as any,
+      params: [address],
+    });
+
+    const resultMap =  result.map((d) => ({
+      token: 'pUSD',
+      amount: parseFloat(formatUnits(d.amount, 6)) + parseFloat(formatUnits(d.feeAmount, 6)),
+      apr: `${d.apr}%`,
+      depositTimestamp: d.depositTimestamp,
+      unclaimedReward: formatUnits(d.unclaimedReward, 6),
+      lastRewardCalculation: d.lastRewardCalculation,
+      withdrawn: d.withdrawn
+    }));
+
+    return resultMap;
+  } catch (err) {
+    console.error("Error fetching user deposits:", err);
+    return [];
+  }
 }

@@ -1,14 +1,31 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Tabs } from "antd";
 import { DollarOutlined, SwapOutlined } from '@ant-design/icons';
 import { ActionCards } from '../components/dashboard/ActionCards';
 import { LoanInterface } from '../components/dashboard/Loan';
 import { LiquidityInterface } from '../components/dashboard/Liquidity';
-import { LoanType, LiquidityPosition } from '../types/loan';
+import { LoanType } from '../types/loan';
+import useAuthStore from '../stores/authStore';
+import { getTokenBalance } from '../contracts/token'
+import { useActiveAccount } from 'thirdweb/react'
 
 const { TabPane } = Tabs;
 
 const Dashboard: React.FC = () => {
+  const { balance, setBalance, setBalanceLoading } = useAuthStore();
+  const account = useActiveAccount();
+
+  useEffect(() => {
+      const fetchBalance = async () => {
+          if (account?.address) {
+              const userBalance = await getTokenBalance(account?.address);
+              setBalance(userBalance);
+              setBalanceLoading(false);
+          }
+      };
+      
+      fetchBalance();
+  }, [account, balance]);
 
   // DUMMY
   const loans: LoanType[] = [
@@ -36,20 +53,6 @@ const Dashboard: React.FC = () => {
       dueDate: "2023-10-20",
       status: "Liquidated",
     },
-  ];
-  const liquidityPositions: LiquidityPosition[] = [
-    {
-      key: 1,
-      token: "pUSD",
-      amount: "5,000",
-      apr: "12.8%",
-    },
-    {
-      key: 2,
-      token: "pUSD",
-      amount: "10,000",
-      apr: "9.5%",
-    }
   ];
   // END OF DUMMY
   return (
@@ -79,7 +82,7 @@ const Dashboard: React.FC = () => {
             }
             key="liquidity"
           >
-            <LiquidityInterface positions={liquidityPositions} />
+            <LiquidityInterface />
           </TabPane>
         </Tabs>
       </section>
