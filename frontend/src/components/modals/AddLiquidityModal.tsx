@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, Typography, Alert } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { Modal, Form, Input, Button, Typography, Alert, notification } from 'antd';
+import { ensureAllowanceThenAddLiquidity } from '../../contracts/deposit'
+import { getTokenBalance } from '../../contracts/token'
+import { useSendTransaction, useActiveAccount } from 'thirdweb/react'
+import useSettingStore from '../../stores/settingStore';
+import { Skeleton } from 'antd';
 
 const { Text } = Typography;
 
@@ -16,24 +20,36 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   onSubmit
 }) => {
   const [form] = Form.useForm();
-  const [currentAPR, setCurrentAPR] = useState("12.5%");
+  const { mutate: sendTransaction, isPending } = useSendTransaction();
+  const { APR, isAPRLoading } = useSettingStore();
+  const [balance, setBalance] = useState('0');
+  const account = useActiveAccount();
 
-  // Simulate APR updates based on mock market conditions
-  useEffect(() => {
-    if (visible) {
-      const interval = setInterval(() => {
-        // Random APR fluctuation between 12% and 13% for demo purposes
-        const newAPR = (12 + Math.random()).toFixed(1) + "%";
-        setCurrentAPR(newAPR);
-      }, 3000);
-      
-      return () => clearInterval(interval);
+  const handleSubmit = async (values: { amount: string }) => {
+    try {
+      const tx = await ensureAllowanceThenAddLiquidity({ amount: values.amount, account: account });
+      await sendTransaction(tx as any, {
+        onSuccess: (receipt) => {
+          console.log(receipt);
+          
+          notification.success({
+            message: "Liquidity Added",
+            description: `Successfully added ${values.amount} pUSD to the pool`,
+          });
+          onSubmit(values);
+          form.resetFields();
+          setBalance(prev => (parseFloat(prev) - parseFloat(values.amount)).toFixed(6))
+        },
+        onError: (error) => {
+          notification.error({
+            message: "Transaction Failed",
+            description: error.message || "Failed to add liquidity",
+          });
+        },
+      });
+    } catch (err) {
+      console.error("Failed to add liquidity:", err);
     }
-  }, [visible]);
-
-  const handleSubmit = (values: { amount: string }) => {
-    onSubmit(values);
-    form.resetFields();
   };
 
   useEffect(() => {
@@ -42,10 +58,21 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
     }
   }, [visible, form]);
 
+  useEffect(() => {
+      const fetchBalance = async () => {
+          if (account?.address) {
+              const userBalance = await getTokenBalance(account?.address);
+              setBalance(userBalance);
+          }
+      };
+      
+      fetchBalance();
+  }, [account, balance]);
+
   return (
     <Modal
       title="Add Liquidity (pUSD)"
-      visible={visible}
+      open={visible}
       onCancel={onClose}
       width={600}
       footer={[
@@ -57,6 +84,7 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           type="primary" 
           onClick={() => form.submit()}
           className="bg-green-600 hover:bg-green-700 border-none"
+          loading={isPending}
         >
           Deposit pUSD
         </Button>,
@@ -75,30 +103,34 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
             message: 'Please enter amount' 
           }]}
         >
-          <Input 
-            type="number" 
-            placeholder="Enter pUSD amount" 
-            addonAfter="pUSD"
-          />
+          <div className="space-y-1">
+            <Input 
+              type="number" 
+              placeholder="Enter pUSD amount" 
+              addonAfter="pUSD"
+            />
+            <Text type="secondary" className="text-xs block">
+              Balance: {balance} pUSD
+            </Text>
+          </div>
         </Form.Item>
 
         <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center">
             <Text strong>Current APR:</Text>
-            <Text strong className="text-green-600 text-lg">
-              {currentAPR}
-            </Text>
-          </div>
-          <div className="flex items-start">
-            <InfoCircleOutlined className="text-blue-500 mr-2 mt-1" />
-            <Text type="secondary" className="text-xs">
-              APR is calculated based on:
-              <ul className="list-disc pl-4 mt-1">
-                <li>Current pool utilization (75%)</li>
-                <li>Loan demand in the system</li>
-                <li>Platform risk parameters</li>
-              </ul>
-            </Text>
+
+            {isAPRLoading ? (
+                <Skeleton.Input 
+                  active 
+                  size="small" 
+                  style={{ width: 60 }} 
+                  className="[&_.ant-skeleton-input]:!h-6"
+                />
+              ) : (
+                <Text strong className="text-green-600 text-lg">
+                  {APR}%
+                </Text>
+              )}
           </div>
         </div>
 

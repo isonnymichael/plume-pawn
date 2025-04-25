@@ -1,18 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createThirdwebClient } from 'thirdweb';
 import { ConnectButton, useActiveAccount, useActiveWalletChain } from 'thirdweb/react';
 import { createWallet } from 'thirdweb/wallets';
 import useAuthStore from '../stores/authStore';
 import { plumeTestnet } from '../lib/chain';
+import { thirdWebClient } from '../lib/client';
 
-const clientId = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
-
-if (!clientId) {
-  throw new Error("THIRDWEB_CLIENT_ID is not defined");
-}
-
-const client = createThirdwebClient({ clientId });
 const wallets = [
   createWallet('io.metamask'),
   createWallet('com.coinbase.wallet'),
@@ -44,7 +37,7 @@ const WalletConnect = () => {
   return (
     <div>
       <ConnectButton
-        client={client}
+        client={thirdWebClient}
         wallets={wallets}
         chain={plumeTestnet}
         connectModal={{ size: 'compact' }}

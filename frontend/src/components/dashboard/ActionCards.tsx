@@ -1,10 +1,34 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RequestLoanModal } from '../modals/RequestLoanModal';
 import { AddLiquidityModal } from '../modals/AddLiquidityModal';
+import useSettingStore from '../../stores/settingStore';
+import { getAPR } from '../../contracts/deposit';
+import { getLTV } from '../../contracts/loan';
+import { Skeleton } from 'antd';
 
 export const ActionCards = () => {
   const [loanModalVisible, setLoanModalVisible] = useState(false);
   const [liquidityModalVisible, setLiquidityModalVisible] = useState(false);
+
+  const { APR, isAPRLoading, setAPR, setAPRLoading } = useSettingStore();
+  const { LTV, isLTVLoading, setLTV, setLTVLoading } = useSettingStore();
+
+  const updateAPR = async () => {
+    const currentAPR = await getAPR();
+    setAPR(currentAPR);
+    setAPRLoading(false);
+  };
+
+  const updateLTV = async () => {
+    const currentLTV = await getLTV();
+    setLTV(currentLTV);
+    setLTVLoading(false);
+  };
+
+  useEffect(() => {
+    updateAPR();
+    updateLTV();
+  }, [APR, LTV]);
 
   const handleLoanSubmit = (values: any) => {
     console.log('Loan request:', values);
@@ -25,6 +49,21 @@ export const ActionCards = () => {
             <p className="text-gray-600 mb-6">
               Pawn your RWA NFTs to get instant loans while maintaining ownership.
             </p>
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">Current LTV</p>
+              {isLTVLoading ? (
+                <Skeleton.Input 
+                  active 
+                  size="small" 
+                  style={{ width: 60 }} 
+                  className="[&_.ant-skeleton-input]:!h-6"
+                />
+              ) : (
+                <p className="text-2xl font-bold text-red-600">
+                  {LTV}%
+                </p>
+              )}
+            </div>
           </div>
           <div>
             <button 
@@ -44,7 +83,18 @@ export const ActionCards = () => {
             </p>
             <div className="mb-4">
               <p className="text-sm text-gray-500">Current Pool APY</p>
-              <p className="text-2xl font-bold text-green-600">12.8%</p>
+              {isAPRLoading ? (
+                <Skeleton.Input 
+                  active 
+                  size="small" 
+                  style={{ width: 60 }} 
+                  className="[&_.ant-skeleton-input]:!h-6"
+                />
+              ) : (
+                <p className="text-2xl font-bold text-green-600">
+                  {APR}%
+                </p>
+              )}
             </div>
           </div>
           <div>
