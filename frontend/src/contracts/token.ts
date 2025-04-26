@@ -5,7 +5,7 @@ import { thirdWebClient } from '../lib/client';
 
 export const tokenContract = getContract({
     client: thirdWebClient,
-    address: import.meta.env.TOKEN_CONTRACT,
+    address: import.meta.env.VITE_TOKEN_CONTRACT,
     chain: plumeTestnet,
 });
 

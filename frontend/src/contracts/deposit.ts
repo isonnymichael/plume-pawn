@@ -7,7 +7,7 @@ import { tokenContract } from './token';
 
 export const plumePawnContract = getContract({
     client: thirdWebClient,
-    address: import.meta.env.PLUME_PAWN_CONTRACT,
+    address: import.meta.env.VITE_PLUME_PAWN_CONTRACT,
     chain: plumeTestnet,
 });
 
@@ -34,7 +34,7 @@ export async function ensureAllowanceThenAddLiquidity({
     const allowance = await readContract({
       contract: tokenContract,
       method: "function allowance(address owner, address spender) view returns (uint256)",
-      params: [account.address, import.meta.env.PLUME_PAWN_CONTRACT],
+      params: [account.address, import.meta.env.VITE_PLUME_PAWN_CONTRACT],
     }) as bigint;
   
     if (allowance < parsedAmount) {
@@ -42,7 +42,7 @@ export async function ensureAllowanceThenAddLiquidity({
       const approveTx = await prepareContractCall({
         contract: tokenContract,
         method: "function approve(address spender, uint256 amount)",
-        params: [import.meta.env.PLUME_PAWN_CONTRACT, parsedAmount],
+        params: [import.meta.env.VITE_PLUME_PAWN_CONTRACT, parsedAmount],
       });
   
       const { transactionHash } = await sendTransaction({

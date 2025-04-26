@@ -4,7 +4,7 @@ import { thirdWebClient } from '../lib/client';
 
 export const plumePawnContract = getContract({
     client: thirdWebClient,
-    address: import.meta.env.PLUME_PAWN_CONTRACT,
+    address: import.meta.env.VITE_PLUME_PAWN_CONTRACT,
     chain: plumeTestnet,
 });
 
