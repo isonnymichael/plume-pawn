@@ -72,9 +72,15 @@ export async function getDepositsByUser(address: string) {
       method: "function getDepositsByUser(address) view returns ((uint256 depositId, uint256 amount, uint256 feeAmount, uint256 apr, uint256 depositTimestamp, uint256 unclaimedReward, uint256 lastRewardCalculation, bool withdrawn)[])" as any,
       params: [address],
     });
-    console.log(result);
 
-    const resultMap =  result.map((d) => ({
+    const sortedResult = [...result]
+    .filter(d => !d.withdrawn)
+    .sort((a, b) => 
+      parseInt(b.depositTimestamp) - parseInt(a.depositTimestamp)
+    );
+
+    const resultMap =  sortedResult.map((d) => ({
+      depositId: parseInt(d.depositId),
       token: 'pUSD',
       amount: parseFloat(formatUnits(d.amount, 6)) + parseFloat(formatUnits(d.feeAmount, 6)),
       apr: `${d.apr}%`,

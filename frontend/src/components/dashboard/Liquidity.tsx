@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Skeleton } from "antd";
+import { Table, Button, Skeleton, Tooltip  } from "antd";
 import type { ColumnsType } from 'antd/es/table';
 import { DollarOutlined } from '@ant-design/icons';
 import { LiquidityPosition } from '../../types/deposit';
@@ -47,13 +47,42 @@ export const LiquidityInterface: React.FC = () => {
       key: 'apr',
     },
     {
+      title: 'Reward',
+      dataIndex: 'unclaimedReward',
+      key: 'unclaimedReward',
+      render: (unclaimedReward) => `${unclaimedReward} $pUSD`,
+    },
+    {
       title: 'Action',
       key: 'action',
-      render: (_, record) => (
-        <Button className="!text-green-600 hover:!text-green-800 !px-3 !py-1 !rounded-full !border !border-gray-300 hover:!bg-gray-100 transition-colors">
-          Withdraw
-        </Button>
-      ),
+      align: 'right',
+      render: (_, record) => {
+        const isDisabled = record.unclaimedReward === "0.0";
+        
+        return (
+          <Tooltip 
+            title={isDisabled ? "No rewards available to withdraw" : ""}
+            placement="top"
+          >
+            <Button 
+              className={`!px-3 !py-1 !rounded-full !border ${
+                isDisabled 
+                  ? "!text-gray-400 !border-gray-300 !bg-gray-100 cursor-not-allowed" 
+                  : "!text-green-600 hover:!text-green-800 !border-gray-300 hover:!bg-gray-100"
+              } transition-colors`}
+              disabled={isDisabled}
+              onClick={() => {
+                if (!isDisabled) {
+                  console.log('Record:', record);
+                  
+                }
+              }}
+            >
+              Withdraw
+            </Button>
+          </Tooltip>
+        );
+      }
     },
   ];
 

@@ -5,4 +5,5 @@ export type PrepareLiquidityArgs = {
 export interface LiquidityPosition {
     amount: number;
     apr: string;
+    unclaimedReward: string;
 }
