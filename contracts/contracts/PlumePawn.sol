@@ -33,18 +33,21 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
 
     struct Loan {
         address borrower;
+        uint256 loanId;
         uint256 tokenId;
         uint256 amount;
         uint256 repayAmount;
         uint256 feeAmount;
         uint256 dueDate;
         bool repaid;
+        bool overdue;
     }
 
     Loan[] public loans;
     mapping(address => uint256[]) public userLoans;
 
     struct DepositInfo {
+        uint256 depositId;
         uint256 amount;
         uint256 feeAmount;
         uint256 apr;
@@ -205,8 +208,11 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         require(success, "Transfer failed");
         
         totalPlatformFeesCollected += feeAmount;
+
+        uint256 depositId = allDeposits.length - 1;
         
         allDeposits.push(DepositInfo({
+            depositId: depositId,
             amount: depositAmount,
             feeAmount: feeAmount,
             apr: APR,
@@ -215,8 +221,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
             lastRewardCalculation: block.timestamp,
             withdrawn: false
         }));
-        
-        uint256 depositId = allDeposits.length - 1;
+
         userDeposits[msg.sender].push(depositId);
         
         totalLiquidity += depositAmount;
@@ -315,17 +320,20 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         bool success = pUSD.transfer(msg.sender, loanAmount);
         require(success, "Loan transfer failed");
 
+        uint256 loanId = loans.length - 1;
+
         loans.push(Loan({
             borrower: msg.sender,
+            loanId: loanId,
             tokenId: tokenId,
             amount: loanAmount,
             repayAmount: repayAmount,
             feeAmount: feeAmount,
             dueDate: block.timestamp + duration,
-            repaid: false
+            repaid: false,
+            overdue: false
         }));
 
-        uint256 loanId = loans.length - 1;
         userLoans[msg.sender].push(loanId);
 
         totalBorrowed += loanAmount;
@@ -387,9 +395,23 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     function getLoansByUser(address user) external view returns (Loan[] memory) {
         uint256[] memory ids = userLoans[user];
         Loan[] memory result = new Loan[](ids.length);
+        
         for (uint256 i = 0; i < ids.length; i++) {
-            result[i] = loans[ids[i]];
+            Loan storage loan = loans[ids[i]];
+            
+            result[i] = Loan({
+                borrower: loan.borrower,
+                loanId: loan.loanId,
+                tokenId: loan.tokenId,
+                amount: loan.amount,
+                repayAmount: loan.repayAmount,
+                feeAmount: loan.feeAmount,
+                dueDate: loan.dueDate,
+                repaid: loan.repaid,
+                overdue: !loan.repaid && block.timestamp > loan.dueDate
+            });
         }
+        
         return result;
     }
 
@@ -402,9 +424,20 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
     function getDepositsByUser(address user) external view returns (DepositInfo[] memory) {
         uint256[] memory ids = userDeposits[user];
         DepositInfo[] memory result = new DepositInfo[](ids.length);
+        
         for (uint256 i = 0; i < ids.length; i++) {
-            result[i] = allDeposits[ids[i]];
+            DepositInfo memory deposit = allDeposits[ids[i]];
+            
+            // Calculate unclaimed reward if deposit is not withdrawn
+            if (!deposit.withdrawn) {
+                uint256 timeElapsed = block.timestamp - deposit.lastRewardCalculation;
+                uint256 additionalReward = (deposit.amount * deposit.apr * timeElapsed) / (SECONDS_IN_YEAR * 100);
+                deposit.unclaimedReward += additionalReward;
+            }
+            
+            result[i] = deposit;
         }
+        
         return result;
     }
 
