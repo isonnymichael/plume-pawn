@@ -209,7 +209,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         
         totalPlatformFeesCollected += feeAmount;
 
-        uint256 depositId = allDeposits.length - 1;
+        uint256 depositId = allDeposits.length;
         
         allDeposits.push(DepositInfo({
             depositId: depositId,
@@ -320,7 +320,7 @@ contract PlumePawn is Ownable, IERC721Receiver, ReentrancyGuard {
         bool success = pUSD.transfer(msg.sender, loanAmount);
         require(success, "Loan transfer failed");
 
-        uint256 loanId = loans.length - 1;
+        uint256 loanId = loans.length;
 
         loans.push(Loan({
             borrower: msg.sender,
