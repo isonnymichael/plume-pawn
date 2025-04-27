@@ -1,15 +1,14 @@
 import { getContract, prepareContractCall, readContract, sendTransaction, waitForReceipt } from "thirdweb";
+import { useSendTransaction } from "thirdweb/react";
 import { plumeTestnet } from '../lib/chain';
 import { thirdWebClient } from '../lib/client';
-import { parseUnits } from "ethers";
+import { parseUnits, formatUnits } from "ethers";
 import { PrepareLiquidityArgs } from '../types/deposit';
 import { tokenContract } from './token';
 
-const pawnContractAddress = "0xAeC5e1c78a8726634Ad1C3c45C59bbC4f1Fd5c22";
-
 export const plumePawnContract = getContract({
     client: thirdWebClient,
-    address: pawnContractAddress,
+    address: import.meta.env.VITE_PLUME_PAWN_CONTRACT,
     chain: plumeTestnet,
 });
 
@@ -36,7 +35,7 @@ export async function ensureAllowanceThenAddLiquidity({
     const allowance = await readContract({
       contract: tokenContract,
       method: "function allowance(address owner, address spender) view returns (uint256)",
-      params: [account.address, pawnContractAddress],
+      params: [account.address, import.meta.env.VITE_PLUME_PAWN_CONTRACT],
     }) as bigint;
   
     if (allowance < parsedAmount) {
@@ -44,7 +43,7 @@ export async function ensureAllowanceThenAddLiquidity({
       const approveTx = await prepareContractCall({
         contract: tokenContract,
         method: "function approve(address spender, uint256 amount)",
-        params: [pawnContractAddress, parsedAmount],
+        params: [import.meta.env.VITE_PLUME_PAWN_CONTRACT, parsedAmount],
       });
   
       const { transactionHash } = await sendTransaction({
@@ -64,4 +63,60 @@ export async function ensureAllowanceThenAddLiquidity({
       method: "function addLiquidity(uint256 amount)",
       params: [parsedAmount],
     });
+}
+
+export async function getDepositsByUser(address: string) {
+  try {
+
+    const result: any[] = await readContract({
+      contract: plumePawnContract,
+      method: "function getDepositsByUser(address) view returns ((uint256 depositId, uint256 amount, uint256 feeAmount, uint256 apr, uint256 depositTimestamp, uint256 unclaimedReward, uint256 lastRewardCalculation, bool withdrawn)[])" as any,
+      params: [address],
+    });
+
+    const sortedResult = [...result]
+    .filter(d => !d.withdrawn)
+    .sort((a, b) => 
+      parseInt(b.depositTimestamp) - parseInt(a.depositTimestamp)
+    );
+
+    const resultMap =  sortedResult.map((d) => ({
+      depositId: parseInt(d.depositId),
+      token: 'pUSD',
+      amount: parseFloat(formatUnits(d.amount, 6)) + parseFloat(formatUnits(d.feeAmount, 6)),
+      real_amount: formatUnits(d.amount, 6),
+      fee_amount: formatUnits(d.feeAmount, 6),
+      apr: `${d.apr}%`,
+      depositTimestamp: d.depositTimestamp,
+      unclaimedReward: formatUnits(d.unclaimedReward, 6),
+      lastRewardCalculation: d.lastRewardCalculation,
+      withdrawn: d.withdrawn
+    }));
+
+    return resultMap;
+  } catch (err) {
+    console.error("Error fetching user deposits:", err);
+    return [];
+  }
+}
+
+export function useWithdrawLiquidity() {
+  const { mutateAsync: sendTransaction, isPending } = useSendTransaction();
+
+  const withdrawLiquidity = async (depositId: number) => {
+    if (typeof depositId !== "number") {
+      throw new Error("depositId must be a number");
+    }
+
+    const tx = prepareContractCall({
+      contract: plumePawnContract,
+      method: "function withdrawLiquidity(uint256 depositId) external",
+      params: [BigInt(depositId)],
+    });
+
+    const receipt = await sendTransaction(tx);
+    return receipt;
+  };
+
+  return { withdrawLiquidity, isWithdrawing: isPending };
 }
