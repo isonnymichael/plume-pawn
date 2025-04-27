@@ -30,13 +30,11 @@ export const ActionCards = () => {
     updateLTV();
   }, [APR, LTV]);
 
-  const handleLoanSubmit = (values: any) => {
-    console.log('Loan request:', values);
+  const handleLoanSubmit = () => {
     setLoanModalVisible(false);
   };
 
-  const handleLiquiditySubmit = (values: any) => {
-    console.log('Liquidity added:', values);
+  const handleLiquiditySubmit = () => {
     setLiquidityModalVisible(false);
   };
 

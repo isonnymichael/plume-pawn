@@ -1,4 +1,5 @@
 import { getContract, prepareContractCall, readContract, sendTransaction, waitForReceipt } from "thirdweb";
+import { useSendTransaction } from "thirdweb/react";
 import { plumeTestnet } from '../lib/chain';
 import { thirdWebClient } from '../lib/client';
 import { parseUnits, formatUnits } from "ethers";
@@ -83,6 +84,8 @@ export async function getDepositsByUser(address: string) {
       depositId: parseInt(d.depositId),
       token: 'pUSD',
       amount: parseFloat(formatUnits(d.amount, 6)) + parseFloat(formatUnits(d.feeAmount, 6)),
+      real_amount: formatUnits(d.amount, 6),
+      fee_amount: formatUnits(d.feeAmount, 6),
       apr: `${d.apr}%`,
       depositTimestamp: d.depositTimestamp,
       unclaimedReward: formatUnits(d.unclaimedReward, 6),
@@ -95,4 +98,25 @@ export async function getDepositsByUser(address: string) {
     console.error("Error fetching user deposits:", err);
     return [];
   }
+}
+
+export function useWithdrawLiquidity() {
+  const { mutateAsync: sendTransaction, isPending } = useSendTransaction();
+
+  const withdrawLiquidity = async (depositId: number) => {
+    if (typeof depositId !== "number") {
+      throw new Error("depositId must be a number");
+    }
+
+    const tx = prepareContractCall({
+      contract: plumePawnContract,
+      method: "function withdrawLiquidity(uint256 depositId) external",
+      params: [BigInt(depositId)],
+    });
+
+    const receipt = await sendTransaction(tx);
+    return receipt;
+  };
+
+  return { withdrawLiquidity, isWithdrawing: isPending };
 }

@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Skeleton, Tooltip  } from "antd";
+import { Table, Button, Skeleton, Tooltip, notification } from "antd";
 import type { ColumnsType } from 'antd/es/table';
 import { DollarOutlined } from '@ant-design/icons';
 import { LiquidityPosition } from '../../types/deposit';
 import { useActiveAccount } from 'thirdweb/react';
-import { getDepositsByUser } from "../../contracts/deposit";
+import { getDepositsByUser, useWithdrawLiquidity  } from "../../contracts/deposit";
 import useAuthStore from '../../stores/authStore';
 
 export const LiquidityInterface: React.FC = () => {
   const account = useActiveAccount();
   const address = account?.address;
-  const { balance } = useAuthStore();
+  const { balance, setBalance } = useAuthStore();
 
   const [positions, setPositions] = useState<LiquidityPosition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const { withdrawLiquidity } = useWithdrawLiquidity();
 
   useEffect(() => {
     const fetchDeposits = async () => {
@@ -65,16 +67,32 @@ export const LiquidityInterface: React.FC = () => {
             placement="top"
           >
             <Button 
+              loading={loadingId === record.depositId}
               className={`!px-3 !py-1 !rounded-full !border ${
                 isDisabled 
                   ? "!text-gray-400 !border-gray-300 !bg-gray-100 cursor-not-allowed" 
                   : "!text-green-600 hover:!text-green-800 !border-gray-300 hover:!bg-gray-100"
               } transition-colors`}
               disabled={isDisabled}
-              onClick={() => {
+              onClick={async () => {
+                setLoadingId(record.depositId);
+                
                 if (!isDisabled) {
-                  console.log('Record:', record);
-                  
+                  try {
+                    const receipt = await withdrawLiquidity(record.depositId);
+                    setBalance(String(parseFloat(balance ?? '0') + parseFloat(record.real_amount) + parseFloat(record.unclaimedReward)));
+                    notification.success({
+                      message: "Withdraw Successful",
+                      description: `Withdrawn successfully: ${receipt.transactionHash} `,
+                    });
+                  } catch (err: any) {
+                    notification.error({
+                      message: "Withdraw Failed",
+                      description: err || "Failed to add withdraw",
+                    });
+                  }  finally {
+                    setLoadingId(null);
+                  }
                 }
               }}
             >
