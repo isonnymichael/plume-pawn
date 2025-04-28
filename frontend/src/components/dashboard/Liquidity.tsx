@@ -128,7 +128,7 @@ export const LiquidityInterface: React.FC = () => {
       {loading ? (
         <Table
           columns={skeletonColumns}
-          dataSource={Array(3).fill({})} // 3 baris skeleton
+          dataSource={Array(3).fill({})}
           pagination={false}
           showHeader={true}
         />
