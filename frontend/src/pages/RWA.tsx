@@ -1,13 +1,49 @@
 import React from "react"
 import { Form, Input, InputNumber, Button, Upload, message } from "antd"
 import { UploadOutlined } from "@ant-design/icons"
+import { upload } from "thirdweb/storage";
+import { thirdWebClient } from '../lib/client';
 
 const RWA: React.FC = () => {
   const [form] = Form.useForm()
 
-  const onFinish = (values: any) => {
-    console.log("Minting RWA NFT with values:", values)
-    message.success("Mint request submitted!")
+  const onFinish = async (values: any) => {
+    const { name, ticker, amount, image } = values
+    const file = image[0].originFileObj
+  
+    if (!file) {
+      message.error("Image file not found!")
+      return
+    }
+  
+    try {
+      message.loading("Uploading to IPFS...", 2)
+  
+        const metadataUri = await upload({
+            client: thirdWebClient,
+            files: [{
+                name: `${name}_metadata.json`,
+                data: JSON.stringify({
+                name,
+                description: `${ticker} token with ${amount} supply`,
+                image: file,
+                attributes: [
+                    { trait_type: "Ticker", value: ticker },
+                    { trait_type: "Amount", value: amount }
+                ]
+                })
+            }]
+        });
+  
+      console.log("Mint with metadata URI:", metadataUri)
+  
+      // TODO: Call smart contract mintRWA(name, ticker, amount, metadataURI)
+  
+      message.success("Mint request prepared!")
+    } catch (err) {
+      console.error(err)
+      message.error("IPFS upload failed")
+    }
   }
 
   const normFile = (e: any) => {
