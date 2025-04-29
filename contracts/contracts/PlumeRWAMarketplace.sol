@@ -3,10 +3,10 @@ pragma solidity ^0.8.25;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract PlumeRWAMarketplace is ReentrancyGuard, Ownable {
+contract PlumeRWAMarketplace is Ownable, ReentrancyGuard {
     struct Listing {
         uint256 id;
         address seller;
@@ -38,7 +38,7 @@ contract PlumeRWAMarketplace is ReentrancyGuard, Ownable {
         uint256 totalPrice
     );
 
-    constructor(address _pUSD) {
+    constructor(address _pUSD) Ownable(msg.sender) {
         pUSD = IERC20(_pUSD);
     }
 
