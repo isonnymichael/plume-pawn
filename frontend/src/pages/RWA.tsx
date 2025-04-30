@@ -112,7 +112,7 @@ const RWA: React.FC = () => {
     const fetchNFTs = async () => {
         try {
           setLoading(true);
-          const fetchedNFTs = await getNFTs(); 
+          const fetchedNFTs = await getNFTs(account?.address); 
           setNfts(fetchedNFTs);
         } catch (error) {
           console.error("Failed to fetch NFTs:", error);
@@ -200,7 +200,7 @@ const RWA: React.FC = () => {
                 </div>
 
                 {/* LIST RWA */}
-                {/* <div className="max-w-6xl mx-auto mt-8 bg-white shadow-xl rounded-2xl p-8">
+                <div className="max-w-6xl mx-auto mt-8 bg-white shadow-xl rounded-2xl p-8">
                     <Divider orientation="left" orientationMargin={0}>
                         <Text strong style={{ fontSize: '1.25rem' }}>Your RWA NFTs</Text>
                     </Divider>
@@ -217,10 +217,18 @@ const RWA: React.FC = () => {
                                     title={nft.name}
                                     description={
                                     <>
-                                        <Text strong>Ticker: {nft.ticker}</Text><br />
-                                        <Text>Supply: { `${nft.currentSupply}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</Text><br />
-                                        <Text type="secondary" style={{ fontSize: '0.8rem' }}>
-                                        Token ID: {nft.tokenId}
+                                        <Text strong>Ticker: {nft.ticker}</Text> |
+                                        <Text> Supply: { `${nft.currentSupply}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</Text> |
+                                        <Text> Balance: { `${nft.ownerBalance}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</Text><br />
+                                        <Text> Creator:  
+                                            <a 
+                                                href={`https://testnet-explorer.plumenetwork.xyz/address/${nft.creator}`}
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                style={{ color: '#1890ff' }}
+                                                >
+                                                {nft.creator}
+                                            </a>
                                         </Text>
                                     </>
                                     }
@@ -229,7 +237,7 @@ const RWA: React.FC = () => {
                         </List.Item>
                         )}
                     />
-                </div> */}
+                </div>
             </section>
         </div>
     )
