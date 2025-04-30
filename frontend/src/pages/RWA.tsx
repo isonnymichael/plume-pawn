@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import { Form, Input, InputNumber, Button, Upload, notification } from "antd"
+import { Card, List, Avatar, Typography, Divider } from 'antd';
 import { UploadOutlined } from "@ant-design/icons"
 import { upload } from "thirdweb/storage";
 import { thirdWebClient } from '../lib/client';
 import { useActiveAccount } from 'thirdweb/react'
-import { mintRWA } from '../contracts/rwa'
+import { mintRWA, getNFTs } from '../contracts/rwa'
+
+const { Text } = Typography;
 
 const RWA: React.FC = () => {
     const [form] = Form.useForm();
     const account = useActiveAccount();
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [nfts, setNfts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true)
 
     const onFinish = async (values: any) => {
         const { name, ticker, amount, image } = values
@@ -93,13 +99,35 @@ const RWA: React.FC = () => {
         } finally {
             form.resetFields();
             setIsSubmitting(false);
-          }
+
+            await fetchNFTs();
+        }
     }
 
     const normFile = (e: any) => {
         if (Array.isArray(e)) return e
         return e?.fileList
     }
+
+    const fetchNFTs = async () => {
+        try {
+          setLoading(true);
+          const fetchedNFTs = await getNFTs(); 
+          setNfts(fetchedNFTs);
+        } catch (error) {
+          console.error("Failed to fetch NFTs:", error);
+          notification.error({
+            message: "Error",
+            description: "Failed to load NFT list",
+          });
+        } finally {
+          setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchNFTs();
+    }, []);
 
     return (
         <div className="bg-[#F9F9F9] min-h-screen">
@@ -167,6 +195,38 @@ const RWA: React.FC = () => {
                             </Button>
                         </Form.Item>
                     </Form>
+                </div>
+
+                {/* LIST RWA */}
+                <div className="max-w-6xl mx-auto mt-8 bg-white shadow-xl rounded-2xl p-8">
+                    <Divider orientation="left" orientationMargin={0}>
+                        <Text strong style={{ fontSize: '1.25rem' }}>Your RWA NFTs</Text>
+                    </Divider>
+                    
+                    <List
+                        grid={{ gutter: 16, xs: 1, sm: 2, md: 3 }}
+                        dataSource={nfts}
+                        loading={loading}
+                        renderItem={(nft) => (
+                        <List.Item>
+                            <Card>
+                                <Card.Meta
+                                    avatar={<Avatar src={nft.imageUrl} />}
+                                    title={nft.name}
+                                    description={
+                                    <>
+                                        <Text strong>Ticker: {nft.ticker}</Text><br />
+                                        <Text>Supply: {nft.currentSupply}</Text><br />
+                                        <Text type="secondary" style={{ fontSize: '0.8rem' }}>
+                                        Token ID: {nft.tokenId}
+                                        </Text>
+                                    </>
+                                    }
+                                />
+                            </Card>
+                        </List.Item>
+                        )}
+                    />
                 </div>
             </section>
         </div>
