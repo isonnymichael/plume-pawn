@@ -164,15 +164,17 @@ const RWA: React.FC = () => {
                         label="Token Supply"
                         rules={[{ required: true, type: "number", min: 1 }]}
                         >
-                            <InputNumber style={{ width: '100%' }} className="w-full" min={1} placeholder="e.g. 1000" />
+                            <InputNumber 
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                style={{ width: '100%' }} className="w-full" min={1} placeholder="e.g. 1000" />
                         </Form.Item>
 
                         <Form.Item
-                        name="image"
-                        label="Asset Image"
-                        valuePropName="fileList"
-                        getValueFromEvent={normFile}
-                        rules={[{ required: true, message: "Image is required" }]}
+                            name="image"
+                            label="Asset Image"
+                            valuePropName="fileList"
+                            getValueFromEvent={normFile}
+                            rules={[{ required: true, message: "Image is required" }]}
                         >
                             <Upload
                                 listType="picture-card"
@@ -198,7 +200,7 @@ const RWA: React.FC = () => {
                 </div>
 
                 {/* LIST RWA */}
-                <div className="max-w-6xl mx-auto mt-8 bg-white shadow-xl rounded-2xl p-8">
+                {/* <div className="max-w-6xl mx-auto mt-8 bg-white shadow-xl rounded-2xl p-8">
                     <Divider orientation="left" orientationMargin={0}>
                         <Text strong style={{ fontSize: '1.25rem' }}>Your RWA NFTs</Text>
                     </Divider>
@@ -216,7 +218,7 @@ const RWA: React.FC = () => {
                                     description={
                                     <>
                                         <Text strong>Ticker: {nft.ticker}</Text><br />
-                                        <Text>Supply: {nft.currentSupply}</Text><br />
+                                        <Text>Supply: { `${nft.currentSupply}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</Text><br />
                                         <Text type="secondary" style={{ fontSize: '0.8rem' }}>
                                         Token ID: {nft.tokenId}
                                         </Text>
@@ -227,7 +229,7 @@ const RWA: React.FC = () => {
                         </List.Item>
                         )}
                     />
-                </div>
+                </div> */}
             </section>
         </div>
     )
