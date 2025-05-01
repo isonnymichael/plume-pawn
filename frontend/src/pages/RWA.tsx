@@ -18,7 +18,7 @@ const RWA: React.FC = () => {
     const [loading, setLoading] = useState(true)
 
     const onFinish = async (values: any) => {
-        const { name, ticker, amount, image } = values
+        const { name, ticker, amount, description, image } = values
         const file = image[0].originFileObj
         setIsSubmitting(true);
     
@@ -44,11 +44,11 @@ const RWA: React.FC = () => {
                 name: `${name}_metadata.json`,
                 data: JSON.stringify({
                     name,
-                    description: `${ticker} token with ${amount} supply`,
+                    description,
                     image: imageUri,
                     attributes: [
-                    { trait_type: "Ticker", value: ticker },
-                    { trait_type: "Amount", value: amount }
+                        { trait_type: "Ticker", value: ticker },
+                        { trait_type: "Amount", value: amount }
                     ]
                 })
                 }]
@@ -127,7 +127,7 @@ const RWA: React.FC = () => {
 
     useEffect(() => {
         fetchNFTs();
-    }, []);
+    }, [account]);
 
     return (
         <div className="bg-[#F9F9F9] min-h-screen">
@@ -137,66 +137,82 @@ const RWA: React.FC = () => {
                 </p>
 
                 <div className="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-8 text-left">
-                    <Form
-                        form={form}
-                        layout="vertical"
-                        onFinish={onFinish}
-                        initialValues={{ amount: 1 }}
-                    >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={onFinish}
+                    initialValues={{ amount: undefined }}
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Form.Item
-                        name="name"
-                        label="Asset Name"
-                        rules={[{ required: true, message: "Asset name is required" }]}
+                            name="name"
+                            label="Asset Name"
+                            rules={[{ required: true, message: "Asset name is required" }]}
+                            className="md:col-span-1"
                         >
                             <Input placeholder="e.g. Real Estate Bond" />
                         </Form.Item>
 
                         <Form.Item
-                        name="ticker"
-                        label="Ticker"
-                        rules={[{ required: true, message: "Ticker is required" }]}
+                            name="ticker"
+                            label="Ticker"
+                            rules={[{ required: true, message: "Ticker is required" }]}
+                            className="md:col-span-1"
                         >
-                            <Input placeholder="e.g. REBOND" />
+                            <Input placeholder="e.g. REB" />
                         </Form.Item>
 
                         <Form.Item
-                        name="amount"
-                        label="Token Supply"
-                        rules={[{ required: true, type: "number", min: 1 }]}
+                            name="amount"
+                            label="Token Supply"
+                            rules={[{ required: true, type: "number", min: 1 }]}
+                            className="md:col-span-1"
                         >
                             <InputNumber 
                                 formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                style={{ width: '100%' }} className="w-full" min={1} placeholder="e.g. 1000" />
+                                style={{ width: '100%' }} 
+                                min={1} 
+                                placeholder="e.g. 1000" 
+                            />
                         </Form.Item>
+                    </div>
 
-                        <Form.Item
-                            name="image"
-                            label="Asset Image"
-                            valuePropName="fileList"
-                            getValueFromEvent={normFile}
-                            rules={[{ required: true, message: "Image is required" }]}
+                    <Form.Item
+                        name="description"
+                        label="Description"
+                        rules={[{ required: true, message: "Description is required" }]}
+                    >
+                        <Input.TextArea rows={4} placeholder="Enter asset description..." />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="image"
+                        label="Asset Image"
+                        valuePropName="fileList"
+                        getValueFromEvent={normFile}
+                        rules={[{ required: true, message: "Image is required" }]}
+                    >
+                        <Upload
+                            listType="picture-card"
+                            accept="image/*"
+                            maxCount={1}
+                            beforeUpload={() => false}
                         >
-                            <Upload
-                                listType="picture-card"
-                                accept="image/*"
-                                maxCount={1}
-                                beforeUpload={() => false}
-                            >
-                                <Button icon={<UploadOutlined />}></Button>
-                            </Upload>
-                        </Form.Item>
+                            <Button icon={<UploadOutlined />}></Button>
+                        </Upload>
+                    </Form.Item>
 
-                        <Form.Item>
-                            <Button
-                                type="primary"
-                                htmlType="submit"
-                                className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
-                                loading={isSubmitting}
-                            >
-                                Mint RWA NFT
-                            </Button>
-                        </Form.Item>
-                    </Form>
+                    <Form.Item>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
+                            loading={isSubmitting}
+                        >
+                            Mint RWA NFT
+                        </Button>
+                    </Form.Item>
+                </Form>
                 </div>
 
                 {/* LIST RWA */}

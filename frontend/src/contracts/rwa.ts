@@ -62,8 +62,6 @@ export async function getAssetInfo(tokenId: bigint, ownerAddress?: string): Prom
             method: resolveMethod("function balanceOf(address,uint256) view returns (uint256)"),
             params: [ownerAddress, tokenId],
           }) as any;
-
-          console.log(ownerBalance)
         }
 
         return {
@@ -140,6 +138,7 @@ const fetchMetadata = async (metadataUri: string) => {
     try {
       const url = convertIpfsToUrl(metadataUri);
       const response = await axios.get(url);
+      console.log(response);
       return response.data;
     } catch (error) {
       console.error("Failed to fetch metadata:", error);
