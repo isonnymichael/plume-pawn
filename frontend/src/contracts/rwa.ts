@@ -149,7 +149,7 @@ const fetchMetadata = async (metadataUri: string) => {
     try {
       const url = convertIpfsToUrl(metadataUri);
       const response = await axios.get(url);
-      console.log(response);
+
       return response.data;
     } catch (error) {
       console.error("Failed to fetch metadata:", error);

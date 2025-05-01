@@ -1,21 +1,24 @@
-import React, { useState, useEffect  } from 'react';
-import { Form, Input, InputNumber, Button, Upload, notification } from "antd"
-import { Card, List, Avatar, Typography, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, InputNumber, Button, Upload, Select, Tabs, notification } from "antd"
+import { Spin } from 'antd';
 import { UploadOutlined } from "@ant-design/icons"
 import { upload } from "thirdweb/storage";
 import { thirdWebClient } from '../lib/client';
 import { useActiveAccount } from 'thirdweb/react'
 import { mintRWA, getNFTs } from '../contracts/rwa'
 
-const { Text } = Typography;
+const { TabPane } = Tabs;
 
 const RWA: React.FC = () => {
     const [form] = Form.useForm();
+    const [listForm] = Form.useForm();
     const account = useActiveAccount();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [nfts, setNfts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true)
+    const selectedTokenId = Form.useWatch('tokenId', listForm);
+    const selectedNFT = nfts.find(nft => nft.tokenId === selectedTokenId);
 
     const onFinish = async (values: any) => {
         const { name, ticker, amount, description, image } = values
@@ -99,10 +102,17 @@ const RWA: React.FC = () => {
         } finally {
             form.resetFields();
             setIsSubmitting(false);
-
-            await fetchNFTs();
         }
     }
+
+    const onListSubmit = (values: any) => {
+        console.log('Listing values:', values);
+        notification.success({
+            message: "Asset listed successfully!",
+            description: "Image file not found!",
+        });
+        listForm.resetFields();
+    };
 
     const normFile = (e: any) => {
         if (Array.isArray(e)) return e
@@ -125,135 +135,216 @@ const RWA: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        fetchNFTs();
-    }, [account]);
-
     return (
         <div className="bg-[#F9F9F9] min-h-screen">
             <section className="bg-white text-black py-24 px-6 text-center font-sans">
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-10">
-                    Tokenize your physical assets in seconds.
-                </p>
 
-                <div className="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-8 text-left">
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={onFinish}
-                    initialValues={{ amount: undefined }}
-                >
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Form.Item
-                            name="name"
-                            label="Asset Name"
-                            rules={[{ required: true, message: "Asset name is required" }]}
-                            className="md:col-span-1"
+            <Tabs defaultActiveKey="1" centered>
+                <TabPane tab="Mint" key="1">
+                    {/* MINT FORM */}
+                    <div className="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-8 text-left">
+                        <Form
+                            form={form}
+                            layout="vertical"
+                            onFinish={onFinish}
+                            initialValues={{ amount: undefined }}
                         >
-                            <Input placeholder="e.g. Real Estate Bond" />
-                        </Form.Item>
+                            <h2 className="text-2xl font-bold mb-6 text-center">Tokenize your physical assets in seconds</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Form.Item
+                                    name="name"
+                                    label="Asset Name"
+                                    rules={[{ required: true, message: "Asset name is required" }]}
+                                    className="md:col-span-1"
+                                >
+                                    <Input placeholder="e.g. Real Estate Bond" />
+                                </Form.Item>
 
-                        <Form.Item
-                            name="ticker"
-                            label="Ticker"
-                            rules={[{ required: true, message: "Ticker is required" }]}
-                            className="md:col-span-1"
-                        >
-                            <Input placeholder="e.g. REB" />
-                        </Form.Item>
+                                <Form.Item
+                                    name="ticker"
+                                    label="Ticker"
+                                    rules={[{ required: true, message: "Ticker is required" }]}
+                                    className="md:col-span-1"
+                                >
+                                    <Input placeholder="e.g. REB" />
+                                </Form.Item>
 
-                        <Form.Item
-                            name="amount"
-                            label="Token Supply"
-                            rules={[{ required: true, type: "number", min: 1 }]}
-                            className="md:col-span-1"
-                        >
-                            <InputNumber 
-                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                style={{ width: '100%' }} 
-                                min={1} 
-                                placeholder="e.g. 1000" 
-                            />
-                        </Form.Item>
+                                <Form.Item
+                                    name="amount"
+                                    label="Token Supply"
+                                    rules={[{ required: true, type: "number", min: 1 }]}
+                                    className="md:col-span-1"
+                                >
+                                    <InputNumber 
+                                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                        style={{ width: '100%' }} 
+                                        min={1} 
+                                        placeholder="e.g. 1000" 
+                                    />
+                                </Form.Item>
+                            </div>
+
+                            <Form.Item
+                                name="description"
+                                label="Description"
+                                rules={[{ required: true, message: "Description is required" }]}
+                            >
+                                <Input.TextArea rows={4} placeholder="Enter asset description..." />
+                            </Form.Item>
+
+                            <Form.Item
+                                name="image"
+                                label="Asset Image"
+                                valuePropName="fileList"
+                                getValueFromEvent={normFile}
+                                rules={[{ required: true, message: "Image is required" }]}
+                            >
+                                <Upload
+                                    listType="picture-card"
+                                    accept="image/*"
+                                    maxCount={1}
+                                    beforeUpload={() => false}
+                                >
+                                    <Button icon={<UploadOutlined />}></Button>
+                                </Upload>
+                            </Form.Item>
+
+                            <Form.Item>
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
+                                    loading={isSubmitting}
+                                >
+                                    Mint RWA NFT
+                                </Button>
+                            </Form.Item>
+                        </Form>
                     </div>
+                </TabPane>
 
-                    <Form.Item
-                        name="description"
-                        label="Description"
-                        rules={[{ required: true, message: "Description is required" }]}
-                    >
-                        <Input.TextArea rows={4} placeholder="Enter asset description..." />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="image"
-                        label="Asset Image"
-                        valuePropName="fileList"
-                        getValueFromEvent={normFile}
-                        rules={[{ required: true, message: "Image is required" }]}
-                    >
-                        <Upload
-                            listType="picture-card"
-                            accept="image/*"
-                            maxCount={1}
-                            beforeUpload={() => false}
+                <TabPane tab="List" key="2">
+                    {/* MARKETPLACE FORM */}
+                    <div className="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-8 text-left">
+                        <Form
+                            form={listForm}
+                            layout="vertical"
+                            onFinish={onListSubmit}
+                            initialValues={{ pricePerUnit: undefined, amount: undefined }}
                         >
-                            <Button icon={<UploadOutlined />}></Button>
-                        </Upload>
-                    </Form.Item>
+                            <h2 className="text-2xl font-bold mb-6 text-center">List Your Asset</h2>
+                            
+                            <Form.Item
+                                name="tokenId"
+                                label="Select Your RWA NFT"
+                                rules={[{ required: true, message: "Please select an NFT" }]}
+                            >
+                                <Select
+                                    placeholder="Select NFT to list"
+                                    onDropdownVisibleChange={async (open) => {
+                                        if (open && nfts.length === 0) {
+                                            await fetchNFTs();
+                                        }
+                                    }}
+                                    notFoundContent={loading ? <Spin size="small" /> : 'No RWAs found'}
+                                    onChange={(value) => {
+                                        const selectedNFT = nfts.find(nft => nft.tokenId === value);
+                                        listForm.setFieldsValue({
+                                            amount: undefined,
+                                            maxAmount: selectedNFT?.ownerBalance || 0
+                                        });
+                                    }}
+                                    optionLabelProp="label"
+                                >
+                                    {nfts.map(nft => (
+                                        <Select.Option 
+                                            key={nft.tokenId} 
+                                            value={nft.tokenId}
+                                            label={`${nft.name} (${nft.ticker})`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <img 
+                                                    src={nft.imageUrl} 
+                                                    alt={nft.name} 
+                                                    className="w-8 h-8 rounded-md object-cover"
+                                                />
+                                                <div>
+                                                    <div className="font-medium">{nft.name} ({nft.ticker})</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Balance: {nft.ownerBalance} • ID: #{nft.tokenId}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Select.Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
 
-                    <Form.Item>
-                        <Button
-                            type="primary"
-                            htmlType="submit"
-                            className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
-                            loading={isSubmitting}
-                        >
-                            Mint RWA NFT
-                        </Button>
-                    </Form.Item>
-                </Form>
-                </div>
+                            <Form.Item className="mb-0">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Form.Item
+                                    name="pricePerUnit"
+                                    label="Price per Unit (pUSD)"
+                                    rules={[{ required: true, message: "Price is required" }]}
+                                    className="mb-0"
+                                    >
+                                    <InputNumber 
+                                        min={0.01} 
+                                        step={0.01}
+                                        style={{ width: '100%' }} 
+                                        placeholder="0.00"
+                                        formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    />
+                                    </Form.Item>
 
-                {/* LIST RWA */}
-                <div className="max-w-6xl mx-auto mt-8 bg-white shadow-xl rounded-2xl p-8">
-                    <Divider orientation="left" orientationMargin={0}>
-                        <Text strong style={{ fontSize: '1.25rem' }}>Your RWA NFTs</Text>
-                    </Divider>
-                    
-                    <List
-                        grid={{ gutter: 16, xs: 1, sm: 2, md: 3 }}
-                        dataSource={nfts}
-                        loading={loading}
-                        renderItem={(nft) => (
-                        <List.Item>
-                            <Card>
-                                <Card.Meta
-                                    avatar={<Avatar src={nft.imageUrl} />}
-                                    title={nft.name}
-                                    description={
-                                    <>
-                                        <Text strong>Ticker: {nft.ticker}</Text> |
-                                        <Text> Supply: { `${nft.currentSupply}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</Text> |
-                                        <Text> Balance: { `${nft.ownerBalance}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</Text><br />
-                                        <Text> Creator:  
-                                            <a 
-                                                href={`https://testnet-explorer.plumenetwork.xyz/address/${nft.creator}`}
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                style={{ color: '#1890ff' }}
-                                                >
-                                                {nft.creator}
-                                            </a>
-                                        </Text>
-                                    </>
-                                    }
-                                />
-                            </Card>
-                        </List.Item>
-                        )}
-                    />
-                </div>
+                                    <Form.Item
+                                        name="amount"
+                                        label="Amount to List"
+                                        rules={[
+                                            { required: true, message: "Amount is required" },
+                                            () => ({
+                                            validator(_, value) {
+                                                if (!selectedNFT || value <= selectedNFT.ownerBalance) {
+                                                    return Promise.resolve();
+                                                }
+                                                return Promise.reject(new Error(`Cannot exceed balance (${selectedNFT?.ownerBalance || 0})`));
+                                            },
+                                            }),
+                                        ]}
+                                        >
+                                        <div className="space-y-1">
+                                            <InputNumber 
+                                            min={1}
+                                            max={selectedNFT?.ownerBalance || 1}
+                                            style={{ width: '100%' }} 
+                                            placeholder="Enter amount"
+                                            />
+                                            {selectedTokenId && (
+                                            <div className="text-sm text-gray-500">
+                                                Balance: {selectedNFT?.ownerBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || 0}
+                                            </div>
+                                            )}
+                                        </div>
+                                    </Form.Item>
+                                </div>
+                            </Form.Item>
+
+                            <Form.Item>
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl h-12 text-lg"
+                                    loading={isSubmitting}
+                                >
+                                    List on Marketplace
+                                </Button>
+                            </Form.Item>
+                        </Form>
+                    </div>
+                </TabPane>
+
+            </Tabs>
+
             </section>
         </div>
     )
