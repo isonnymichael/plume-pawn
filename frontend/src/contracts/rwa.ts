@@ -94,6 +94,8 @@ export async function getTokenCreator(tokenId: bigint): Promise<string | null> {
 }
 
 export async function getNFTs(ownerAddress?: string) {
+    if (!ownerAddress) return [];
+
     const totalSupply = await readContract({
       contract: plumeRwaContract,
       method: "function nextTokenId() view returns (uint256)",
@@ -101,27 +103,36 @@ export async function getNFTs(ownerAddress?: string) {
   
     const nftItems = [];
     for (let i = 1; i < totalSupply; i++) {
-      const assetInfo = await getAssetInfo(BigInt(i), ownerAddress);
-      const creatorInfo = await getTokenCreator(BigInt(i));
+        const balance = await readContract({
+            contract: plumeRwaContract,
+            method: "function balanceOf(address, uint256) view returns (uint256)",
+            params: [ownerAddress, BigInt(i)]
+        });
 
-      if (assetInfo) {
-        const metadata = await fetchMetadata(assetInfo.metadataURI);
-
-        if (metadata) {
-            nftItems.push({
-                tokenId: i,
-                name: metadata.name || assetInfo.name,
-                ticker: metadata.attributes?.find((a: any) => a.trait_type === "Ticker")?.value || assetInfo.ticker,
-                currentSupply: assetInfo.currentSupply.toString(),
-                maxSupply: assetInfo.maxSupply.toString(),
-                ownerBalance: assetInfo.ownerBalance?.toString() || "0",
-                imageUrl: convertIpfsToUrl(metadata.image),
-                description: metadata.description,
-                creator: creatorInfo,
-                metadata
-            });
+        if (balance > 0) {
+            const assetInfo = await getAssetInfo(BigInt(i), ownerAddress);
+            const creatorInfo = await getTokenCreator(BigInt(i));
+    
+            if (assetInfo) {
+                const metadata = await fetchMetadata(assetInfo.metadataURI);
+    
+                if (metadata) {
+                    nftItems.push({
+                        tokenId: i,
+                        name: metadata.name || assetInfo.name,
+                        ticker: metadata.attributes?.find((a: any) => a.trait_type === "Ticker")?.value || assetInfo.ticker,
+                        currentSupply: assetInfo.currentSupply.toString(),
+                        maxSupply: assetInfo.maxSupply.toString(),
+                        ownerBalance: assetInfo.ownerBalance?.toString() || "0",
+                        imageUrl: convertIpfsToUrl(metadata.image),
+                        description: metadata.description,
+                        creator: creatorInfo,
+                        metadata
+                    });
+                }
+            }
         }
-      }
+
     }
     return nftItems;
 }
