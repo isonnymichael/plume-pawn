@@ -6,6 +6,7 @@ import { upload } from "thirdweb/storage";
 import { thirdWebClient } from '../lib/client';
 import { useActiveAccount } from 'thirdweb/react'
 import { mintRWA, getNFTs } from '../contracts/rwa'
+import { listAsset } from '../contracts/marketplace'
 
 const { TabPane } = Tabs;
 
@@ -105,13 +106,39 @@ const RWA: React.FC = () => {
         }
     }
 
-    const onListSubmit = (values: any) => {
-        console.log('Listing values:', values);
-        notification.success({
-            message: "Asset listed successfully!",
-            description: "Image file not found!",
-        });
-        listForm.resetFields();
+    const onListSubmit = async (values: any) => {
+        const { tokenId, pricePerUnit, amount} = values
+        setIsSubmitting(true);
+
+        try {
+            const result = await listAsset(
+                account,
+                BigInt(tokenId),
+                BigInt(pricePerUnit),
+                BigInt(amount)
+            )
+
+            if (result.status) {
+                notification.success({
+                  message: "Asset listed successfully!",
+                  description: `TxHash: ${result.transactionHash}`,
+                })
+              } else {
+                notification.error({
+                  message: "Listing failed!",
+                })
+            }
+
+        } catch (error) {
+            console.error("Error during listing:", error)
+            notification.error({
+              message: "Listing failed!",
+              description: "Unexpected error occurred.",
+            })
+          } finally {
+            listForm.resetFields()
+            setIsSubmitting(false)
+        }
     };
 
     const normFile = (e: any) => {
@@ -242,7 +269,9 @@ const RWA: React.FC = () => {
                                 <Select
                                     placeholder="Select NFT to list"
                                     onDropdownVisibleChange={async (open) => {
-                                        if (open && nfts.length === 0) {
+                                        if (open ) {
+                                            setNfts([]);
+                                            
                                             await fetchNFTs();
                                         }
                                     }}
