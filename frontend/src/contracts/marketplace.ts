@@ -15,6 +15,15 @@ export const plumeRwaContract = getContract({
     chain: plumeTestnet,
 });
 
+interface Listing {
+    id: number;
+    seller: string;
+    tokenAddress: string;
+    tokenId: number;
+    pricePerUnit: number;
+    amountAvailable: number;
+}
+
 export async function listAsset(
     account: any,
     tokenId: bigint,
@@ -55,3 +64,39 @@ export async function listAsset(
       }
     }
 }
+
+export async function fetchListings(): Promise<Listing[]> {
+    try {
+        const total = await readContract({
+            contract: plumeRwaMarketplaceContract,
+            method: "function nextListingId() view returns (uint256)",
+        });
+  
+        const listings = await Promise.all(
+            [...Array(Number(total)).keys()].map(async (id) => {
+            const listingData: any = await readContract({
+                contract: plumeRwaMarketplaceContract,
+                method: resolveMethod("function listings(uint256) view returns (uint256 id, address seller, address tokenAddress, uint256 tokenId, uint256 pricePerUnit, uint256 amountAvailable)"),
+                params: [id],
+            });
+            const listing: Listing = {
+                id: listingData[0],
+                seller: listingData[1],
+                tokenAddress: listingData[2],
+                tokenId: listingData[3],
+                pricePerUnit: listingData[4],
+                amountAvailable: listingData[5],
+            };
+
+            // Filter out listings with no available amount
+            if (listing.amountAvailable > 0) return listing;
+                return null;
+            })
+        );
+  
+        return listings.filter(Boolean) as Listing[];
+    } catch (err) {
+        console.error("Failed to fetch listings", err);
+        return [];
+    }
+  }

@@ -271,7 +271,7 @@ const RWA: React.FC = () => {
                                     onDropdownVisibleChange={async (open) => {
                                         if (open ) {
                                             setNfts([]);
-                                            
+
                                             await fetchNFTs();
                                         }
                                     }}
@@ -300,7 +300,7 @@ const RWA: React.FC = () => {
                                                 <div>
                                                     <div className="font-medium">{nft.name} ({nft.ticker})</div>
                                                     <div className="text-xs text-gray-500">
-                                                        Balance: {nft.ownerBalance} • ID: #{nft.tokenId}
+                                                        Balance: {nft.ownerBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} • ID: #{nft.tokenId}
                                                     </div>
                                                 </div>
                                             </div>
