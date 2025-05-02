@@ -8,6 +8,8 @@ import { useActiveAccount } from 'thirdweb/react';
 import { getTokenBalance } from '../contracts/token'
 import useAuthStore from '../stores/authStore';
 import { Listing } from '../types/marketplace';
+import { formatCurrency } from '../lib/helper'
+import { formatUnits } from "ethers";
 
 const { Text } = Typography;
 
@@ -69,6 +71,7 @@ const Marketplace: React.FC = () => {
   }, [account, balance]);
 
   const openModal = (listing: any) => {
+    form.resetFields();
     setSelectedListing(listing);
     setIsModalOpen(true);
   };
@@ -165,7 +168,7 @@ const Marketplace: React.FC = () => {
                           <div className="text-xs text-left">{listing.metadata?.attributes[0]?.value}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold">$ {listing.pricePerUnit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</div>
+                          <div className="text-lg font-bold">{formatCurrency(formatUnits(listing.pricePerUnit, 6))}</div>
                           <div className="text-xs">Price</div>
                         </div>
                       </div>
@@ -273,7 +276,7 @@ const Marketplace: React.FC = () => {
               <Text type="secondary">Price per unit:</Text>
               <Text>
                 {selectedListing?.pricePerUnit 
-                  ? selectedListing.pricePerUnit.toString()
+                  ? formatCurrency(formatUnits(selectedListing.pricePerUnit, 6))
                   : '0'} pUSD
               </Text>
             </div>
@@ -285,7 +288,7 @@ const Marketplace: React.FC = () => {
               <Text>Total Cost:</Text>
               <Text>
                 {selectedListing?.pricePerUnit && watchedAmount
-                  ? (selectedListing.pricePerUnit * BigInt(watchedAmount || 0)).toString()
+                  ? formatUnits( (selectedListing.pricePerUnit * BigInt(watchedAmount || 0)), 6 )
                   : '0'} pUSD
               </Text>
             </div>

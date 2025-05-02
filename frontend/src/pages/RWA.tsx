@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Form, Input, InputNumber, Button, Upload, Select, Tabs, notification } from "antd"
 import { Spin } from 'antd';
 import { UploadOutlined } from "@ant-design/icons"
@@ -7,6 +7,8 @@ import { thirdWebClient } from '../lib/client';
 import { useActiveAccount } from 'thirdweb/react'
 import { mintRWA, getNFTs } from '../contracts/rwa'
 import { listAsset } from '../contracts/marketplace'
+import { formatCurrency } from '../lib/helper'
+import { parseUnits } from "ethers";
 
 const { TabPane } = Tabs;
 
@@ -109,12 +111,13 @@ const RWA: React.FC = () => {
     const onListSubmit = async (values: any) => {
         const { tokenId, pricePerUnit, amount} = values
         setIsSubmitting(true);
+        const parsedPrice = parseUnits(pricePerUnit.toString(), 6);
 
         try {
             const result = await listAsset(
                 account,
                 BigInt(tokenId),
-                BigInt(pricePerUnit),
+                parsedPrice,
                 BigInt(amount)
             )
 
@@ -203,7 +206,7 @@ const RWA: React.FC = () => {
                                     className="md:col-span-1"
                                 >
                                     <InputNumber 
-                                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                        formatter={(value) => formatCurrency(value as any, false)}
                                         style={{ width: '100%' }} 
                                         min={1} 
                                         placeholder="e.g. 1000" 
@@ -302,7 +305,7 @@ const RWA: React.FC = () => {
                                                 <div>
                                                     <div className="font-medium">{nft.name} ({nft.ticker})</div>
                                                     <div className="text-xs text-gray-500">
-                                                        Balance: {nft.ownerBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} • ID: #{nft.tokenId}
+                                                        Balance: {formatCurrency(nft.ownerBalance as any, false)} • ID: #{nft.tokenId}
                                                     </div>
                                                 </div>
                                             </div>
@@ -320,11 +323,9 @@ const RWA: React.FC = () => {
                                     className="mb-0"
                                     >
                                     <InputNumber 
-                                        min={0.01} 
-                                        step={0.01}
                                         style={{ width: '100%' }} 
                                         placeholder="0.00"
-                                        formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                        formatter={(value) => formatCurrency(value as any)}
                                     />
                                     </Form.Item>
 
@@ -352,7 +353,7 @@ const RWA: React.FC = () => {
                                             />
                                             {selectedTokenId && (
                                             <div className="text-sm text-gray-500">
-                                                Balance: {selectedNFT?.ownerBalance.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || 0}
+                                                Balance: {formatCurrency(selectedNFT?.ownerBalance, false) || 0}
                                             </div>
                                             )}
                                         </div>

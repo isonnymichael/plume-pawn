@@ -3,7 +3,7 @@ import { plumeTestnet } from '../lib/chain';
 import { thirdWebClient } from '../lib/client';
 import { plumeRwaContract } from './rwa';
 import { Listing } from '../types/marketplace';
-import { parseUnits, formatUnits } from "ethers";
+import { parseUnits } from "ethers";
 import { tokenContract } from './token';
 
 export const plumeRwaMarketplaceContract = getContract({
@@ -93,7 +93,7 @@ export async function buyAsset(
     account: any,
     listingId: bigint,
     amount: bigint,
-    totalPrice: bigint
+    totalPrice: any
   ): Promise<{ status: boolean; transactionHash?: string }> {
     try {
 
@@ -101,7 +101,7 @@ export async function buyAsset(
         const approveTx = prepareContractCall({
             contract: tokenContract,
             method: resolveMethod("function approve(address spender, uint256 amount) external"),
-            params: [plumeRwaMarketplaceContract.address, parseUnits(totalPrice.toString(), 6)],
+            params: [plumeRwaMarketplaceContract.address, totalPrice],
         });
 
         await sendTransaction({
