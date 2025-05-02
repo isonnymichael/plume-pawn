@@ -70,14 +70,6 @@ const Marketplace: React.FC = () => {
                         </div>
                       }
                     />
-
-                    <Button
-                      type="primary"
-                      className="mt-4 w-full bg-blue-600"
-                      onClick={() => handleBuy(listing)}
-                    >
-                      Buy
-                    </Button>
                   </Card>
                 </Col>
               ))}

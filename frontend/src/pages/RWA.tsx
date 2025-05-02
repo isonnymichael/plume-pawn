@@ -239,8 +239,10 @@ const RWA: React.FC = () => {
                             <Form.Item>
                                 <Button
                                     type="primary"
+                                    danger
+                                    shape="round"
                                     htmlType="submit"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl h-12 text-lg"
                                     loading={isSubmitting}
                                 >
                                     Mint RWA NFT
@@ -361,6 +363,8 @@ const RWA: React.FC = () => {
                             <Form.Item>
                                 <Button
                                     type="primary"
+                                    danger
+                                    shape="round"
                                     htmlType="submit"
                                     className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl h-12 text-lg"
                                     loading={isSubmitting}
