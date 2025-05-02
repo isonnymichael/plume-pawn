@@ -3,6 +3,8 @@ import { plumeTestnet } from '../lib/chain';
 import { thirdWebClient } from '../lib/client';
 import { plumeRwaContract } from './rwa';
 import { Listing } from '../types/marketplace';
+import { parseUnits, formatUnits } from "ethers";
+import { tokenContract } from './token';
 
 export const plumeRwaMarketplaceContract = getContract({
     client: thirdWebClient,
@@ -85,4 +87,44 @@ export async function fetchListings(): Promise<Listing[]> {
         console.error("Failed to fetch listings", err);
         return [];
     }
-  }
+}
+
+export async function buyAsset(
+    account: any,
+    listingId: bigint,
+    amount: bigint,
+    totalPrice: bigint
+  ): Promise<{ status: boolean; transactionHash?: string }> {
+    try {
+
+        // Approve pUSD transfer to marketplace.
+        const approveTx = prepareContractCall({
+            contract: tokenContract,
+            method: resolveMethod("function approve(address spender, uint256 amount) external"),
+            params: [plumeRwaMarketplaceContract.address, parseUnits(totalPrice.toString(), 6)],
+        });
+
+        await sendTransaction({
+            transaction: approveTx,
+            account,
+        });
+
+        // Call buy function
+        const transaction = prepareContractCall({
+            contract: plumeRwaMarketplaceContract,
+            method: resolveMethod("function buy(uint256 listingId, uint256 amount) external"),
+            params: [listingId, amount],
+        });
+
+        const { transactionHash } = await sendTransaction({
+            transaction,
+            account,
+        });
+
+        return { status: true, transactionHash };
+    } catch (err) {
+      console.error("Failed to buy asset:", err);
+      return { status: false };
+    }
+}
+  
