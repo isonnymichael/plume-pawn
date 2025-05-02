@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import RWA from './pages/RWA';
+import Marketplace from './pages/Marketplace';
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from './components/ProtectedRoute';
 import { ConfigProvider } from 'antd';
@@ -28,6 +30,16 @@ function App() {
             <Dashboard />
           </ProtectedRoute>
         } />
+
+        {/* Just Dummy */}
+        <Route 
+          path="/rwa" 
+          element={<RWA />} 
+        />
+        <Route 
+          path="/marketplace" 
+          element={<Marketplace />} 
+        />
       </Routes>
     </MainLayout>
 
