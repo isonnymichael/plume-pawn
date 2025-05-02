@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Col, Row, Skeleton, Button } from 'antd';
 import { getListingMetadata } from '../lib/metadata';
-import { fetchListings, plumeRwaContract } from '../contracts/marketplace';
+import { fetchListings } from '../contracts/marketplace';
+import { plumeRwaContract } from '../contracts/rwa';
 
 const Marketplace: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]);

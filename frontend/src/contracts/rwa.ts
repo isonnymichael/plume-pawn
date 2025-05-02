@@ -1,7 +1,7 @@
 import { getContract, readContract, prepareContractCall, sendTransaction, resolveMethod } from "thirdweb";
 import { plumeTestnet } from '../lib/chain';
 import { thirdWebClient } from '../lib/client';
-import axios from "axios";
+import { convertIpfsToUrl, fetchMetadata  } from '../lib/metadata';
 
 export const plumeRwaContract = getContract({
     client: thirdWebClient,
@@ -135,24 +135,4 @@ export async function getNFTs(ownerAddress?: string) {
 
     }
     return nftItems;
-}
-
-const convertIpfsToUrl = (ipfsUri: string) => {
-    if (!ipfsUri) return '';
-    if (ipfsUri.startsWith('ipfs://')) {
-      return `https://ipfs.io/ipfs/${ipfsUri.replace('ipfs://', '')}`;
-    }
-    return ipfsUri;
-}
-
-const fetchMetadata = async (metadataUri: string) => {
-    try {
-      const url = convertIpfsToUrl(metadataUri);
-      const response = await axios.get(url);
-
-      return response.data;
-    } catch (error) {
-      console.error("Failed to fetch metadata:", error);
-      return null;
-    }
 }
