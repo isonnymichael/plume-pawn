@@ -8,7 +8,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     const titleMap: Record<string, string> = {
-      "/": "Pinjam",
+      "/": "Pinjam | Decentralized Digital Pawnshop",
       "/dashboard": "Pinjam | Dashboard",
       "/rwa": "Pinjam | RWA",
       "/marketplace": "Pinjam | Marketplace",
