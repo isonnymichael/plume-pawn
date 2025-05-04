@@ -1,22 +1,17 @@
-# Plume Pawn
+# Pinjam
 
-**Plume Pawn** is a decentralized pawnshop application (DApp) built on top of the [Plume Network](https://plumenetwork.xyz). It enables users to pawn tokenized real-world assets (RWAs) using NFTs that are already issued and managed by Plume’s asset tokenization system.
+**Pinjam** is a decentralized pawnshop application (DApp) built on top of the [Plume Network](https://plumenetwork.xyz). It enables users to pawn tokenized real-world assets (RWAs) using NFTs issued and managed by Plume’s asset tokenization system.
 
-This project utilizes the Plume infrastructure for asset tokenization and implements a custom smart contract to manage the pawn lifecycle — including asset locking, redemption, and liquidation.
-
----
-
-## 🔗 Live Network
-
-> The app is designed for deployment on the **Plume blockchain**. Please ensure wallet compatibility and access to the correct network when testing or deploying.
+This project leverages Plume infrastructure and a custom smart contract to manage the full pawn lifecycle — including asset locking, loan funding, redemption, and liquidation.
 
 ---
 
 ## 💡 Features
 
-- Pawn an NFT in exchange for a loan (secured in smart contract)
-- Redeem pawned assets before expiration
-- Liquidate unredeemed assets past due date
+- Pawn NFTs backed by real-world assets
+- Redeem pawned assets before due date
+- Liquidate expired pawns
+- Provide liquidity and earn APY on locked assets
 
 ---
 
@@ -35,7 +30,7 @@ This project utilizes the Plume infrastructure for asset tokenization and implem
 ## 📦 Project Structure
 
 ```bash
-plume-pawn/
+pinjam/
 ├── contracts/             # Smart contract for pawn logic
 ├── frontend/              # React frontend app (DApp)
 ├── backend/               # Node.js backend API
