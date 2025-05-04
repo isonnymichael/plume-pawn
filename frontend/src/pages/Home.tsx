@@ -8,7 +8,7 @@ const Home: React.FC = () => {
         <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
           Tokenize and borrow against your physical assets in seconds.
           Backed by Plume Network’s RWA tokenization,
-          Plume Pawn brings real-world value to the blockchain.
+          Pinjam brings real-world value to the blockchain.
         </p>
         <a
           href="https://plumenetwork.xyz"
@@ -22,7 +22,7 @@ const Home: React.FC = () => {
 
       <section className="bg-[#F9F9F9] py-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-10">Why Use Plume Pawn?</h2>
+          <h2 className="text-2xl font-bold mb-10">Why Use Pinjam?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded shadow">
               <h3 className="font-semibold mb-2">RWA Tokenization</h3>
