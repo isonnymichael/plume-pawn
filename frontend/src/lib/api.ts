@@ -1,7 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL =
-  'https://explorer-plume-testnet-1.t.conduit.xyz/api/v2/addresses'
+const BASE_URL = '/api/conduit/api/v2/addresses';
 
 export async function fetchNFTs(address: string) {
   try {
