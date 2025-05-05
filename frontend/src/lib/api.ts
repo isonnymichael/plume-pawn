@@ -1,23 +1,15 @@
-import axios from "axios";
+import axios from 'axios'
 
-export const get = async ({
-  url,
-  params,
-}: {
-  url: string;
-  params?: Record<string, string | number>;
-}) => {
-  const response = await axios.get(url, { params });
-  return response.data;
-};
+const BASE_URL =
+  'https://explorer-plume-testnet-1.t.conduit.xyz/api/v2/addresses'
 
-export const post = async <T = unknown>({
-    url,
-    data,
-  }: {
-    url: string;
-    data?: Record<string, any>;
-  }): Promise<T> => {
-    const res = await axios.post(url, data);
-    return res.data;
-};
+export async function fetchNFTs(address: string) {
+  try {
+    const url = `${BASE_URL}/${address}/nft?type=ERC-721%2CERC-404%2CERC-1155`
+    const response = await axios.get(url)
+    return response.data
+  } catch (error) {
+    console.error('Failed to fetch NFTs:', error)
+    throw error
+  }
+}
