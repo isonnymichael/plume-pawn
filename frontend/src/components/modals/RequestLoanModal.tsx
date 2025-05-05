@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, Select, Row, Col, Divider, Checkbox, Typography, Spin } from 'antd';
+import { Modal, Form, Input, Button, Select, Row, Col, Divider, Checkbox, Typography, Spin, notification } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { useActiveAccount } from 'thirdweb/react'
+import { fetchNFTs } from '../../lib/api'; 
 
 const { Text } = Typography;
 
@@ -31,6 +33,7 @@ export const RequestLoanModal: React.FC<RequestLoanModalProps> = ({
   const [rwaList, setRwaList] = useState<RWAItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const account = useActiveAccount();
 
   const interestRates: Record<DurationKey, number> = {
     '30': 6,
@@ -49,32 +52,38 @@ export const RequestLoanModal: React.FC<RequestLoanModalProps> = ({
 
   useEffect(() => {
     if (dropdownOpen && rwaList.length === 0) {
-      setLoading(true);
-      setTimeout(() => {
-        setRwaList([
-          {
-            id: '1',
-            name: 'Gold Necklace NFT',
-            image: 'https://placehold.co/40x40?text=GOLD',
-            value: 5000
-          },
-          {
-            id: '2',
-            name: 'Diamond Ring NFT',
-            image: 'https://placehold.co/40x40?text=DIAMOND',
-            value: 8000
-          },
-          {
-            id: '3',
-            name: 'Luxury Watch NFT',
-            image: 'https://placehold.co/40x40?text=WATCH',
-            value: 12000
-          }
-        ]);
-        setLoading(false);
-      }, 800);
+      fetchData();
     }
   }, [dropdownOpen]);
+
+  const fetchData = async () => {
+    try {
+      if (!account?.address) {
+        notification.success({
+          message: "Wallet not connected",
+          description: `Cannot fetch NFTs.`,
+        });
+
+        return;
+      }
+
+      setLoading(true);
+      const data = await fetchNFTs(account?.address);
+      const items = data.items || [];
+      const formatted = items.map((item: any, idx: number) => ({
+        id: item.id || `${idx}`,
+        name: item.metadata?.name || 'Unnamed NFT',
+        image: item.metadata?.image_url || 'https://placehold.co/40x40?text=NFT',
+        value: parseFloat(item.token?.exchange_rate || '0') || 0
+      }));
+      setRwaList(formatted);
+    } catch (err) {
+      console.error('Error fetching NFTs:', err);
+      setRwaList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculatePayment = () => {
     if (!selectedAsset) return null;
