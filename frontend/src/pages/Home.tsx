@@ -159,18 +159,18 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {[
               {
-                title: "Tokenize Real Assets",
-                desc: "Transform physical items like art, jewelry, or cars into onchain assets with just a few clicks.",
-                icon: "💎",
+                title: "Collateralized Loans",
+                desc: "Use your physical assets as collateral to secure instant loans without selling your valuables.",
+                icon: "🏦",
               },
               {
                 title: "Instant Liquidity",
-                desc: "No waiting, no paperwork — unlock value from your holdings in seconds via automated smart contracts.",
+                desc: "No waiting, no paperwork — access funds in seconds with our streamlined lending process.",
                 icon: "⚡",
               },
               {
-                title: "Fully Transparent",
-                desc: "Track, verify, and manage your loans in real-time, all secured by decentralized infrastructure.",
+                title: "Secure & Transparent",
+                desc: "All transactions are verifiable on-chain with clear terms and secure asset storage.",
                 icon: "🔒",
               },
             ].map((feature, i) => (
@@ -179,7 +179,7 @@ const Home: React.FC = () => {
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.2, duration: 0.6 }}
-                className="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
+                className="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100"
               >
                 <div className="text-4xl mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
