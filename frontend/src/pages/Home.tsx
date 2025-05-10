@@ -116,7 +116,7 @@ const Home: React.FC = () => {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="text-lg md:text-xl text-gray-700 max-w-2xl mb-8"
         >
-          Pinjam is the gateway to fast, permissionless loans using your physical assets as collateral — all powered by the Plume Network.
+          Pinjam is the gateway to fast, permissionless loans using your RWA as collateral — all powered by the Plume Network.
         </motion.p>
 
         <motion.a
@@ -160,7 +160,7 @@ const Home: React.FC = () => {
             {[
               {
                 title: "Collateralized Loans",
-                desc: "Use your physical assets as collateral to secure instant loans without selling your valuables.",
+                desc: "Use your RWA as collateral to secure instant loans without selling your valuables.",
                 icon: "🏦",
               },
               {
@@ -225,7 +225,7 @@ const Home: React.FC = () => {
                   {
                     icon: <FileSearchOutlined className="text-xl" />,
                     title: "Submit Asset Details",
-                    desc: "Provide information about your physical asset for evaluation",
+                    desc: "Provide and submit your RWA",
                     color: "bg-red-100 text-red-600"
                   },
                   {
@@ -243,7 +243,7 @@ const Home: React.FC = () => {
                   {
                     icon: <CheckCircleOutlined className="text-xl" />,
                     title: "Reclaim Asset",
-                    desc: "Your physical asset is returned upon full repayment",
+                    desc: "Your RWA is returned upon full repayment",
                     color: "bg-blue-100 text-blue-600"
                   }
                 ].map((step, i) => (
